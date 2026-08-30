@@ -1,0 +1,62 @@
+{
+ "datasets": {
+  "Filip": {
+   "coefficients": 8.548211671281909,
+   "residualStandardDeviation": 7.9271799546436466,
+   "standardErrors": 8.466955407281185
+  },
+  "Longley": {
+   "coefficients": 10.921425119103837,
+   "residualStandardDeviation": 12.547568223855052,
+   "standardErrors": 12.431382420933904
+  },
+  "NoInt1": {
+   "coefficients": 14.715175620588305,
+   "residualStandardDeviation": 15.059799414108792,
+   "standardErrors": 15.67798437385844
+  },
+  "NoInt2": {
+   "coefficients": 15.117317067688703,
+   "residualStandardDeviation": 15.22090906147575,
+   "standardErrors": 14.879723690217471
+  },
+  "Norris": {
+   "coefficients": 13.326151395349187,
+   "residualStandardDeviation": 13.901433115234584,
+   "standardErrors": 13.823296207612302
+  },
+  "Pontius": {
+   "coefficients": 12.36643329418502,
+   "residualStandardDeviation": 14.086687601774168,
+   "standardErrors": 14.010938081957327
+  },
+  "Wampler1": {
+   "coefficients": 9.468375287876023,
+   "residualStandardDeviation": 9.678194047665151,
+   "standardErrors": 9.677567624725995
+  },
+  "Wampler2": {
+   "coefficients": 13.215153411261754,
+   "residualStandardDeviation": 14.34908292488909,
+   "standardErrors": 14.348456501949935
+  },
+  "Wampler3": {
+   "coefficients": 9.152297934472024,
+   "residualStandardDeviation": 13.915827962645604,
+   "standardErrors": 13.231495095691576
+  },
+  "Wampler4": {
+   "coefficients": 7.673184092527816,
+   "residualStandardDeviation": 14.867595852957074,
+   "standardErrors": 13.319665359728766
+  },
+  "Wampler5": {
+   "coefficients": 5.6750419595124795,
+   "residualStandardDeviation": 14.80177856846743,
+   "standardErrors": 13.31810515205982
+  }
+ },
+ "generator": "numpy 2.5.2, Householder QR (np.linalg.qr)",
+ "meaning": "Worst-case Log Relative Error across the parameters of each NIST linear least squares dataset, for an independent implementation using the same decomposition. Vegoia must match these.",
+ "regenerate": "python3 tools/generate_lls_attainable.py"
+}

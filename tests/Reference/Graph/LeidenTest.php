@@ -50,6 +50,53 @@ final class LeidenTest extends TestCase
         }
     }
 
+    /**
+     * The guarantee holds for every objective, not just the default.
+     *
+     * This caught a real bug. With RBER the search could stall -- refinement
+     * grouping nothing, so aggregation returned the same graph and the loop
+     * spun to its iteration cap -- and exiting that way skips the convergence
+     * condition the guarantee normally rests on. It emerged only once a third
+     * objective existed to exercise it.
+     *
+     * @return iterable<string, array{string, callable(int): Leiden}>
+     */
+    public static function objectives(): iterable
+    {
+        yield 'modularity' => ['modularity', static fn (int $seed): Leiden => Leiden::modularity(seed: $seed)];
+        yield 'cpm' => ['cpm', static fn (int $seed): Leiden => Leiden::constantPotts(0.1, $seed)];
+        yield 'rber' => ['rber', static fn (int $seed): Leiden => Leiden::erdosRenyiPotts(1.0, $seed)];
+    }
+
+    /** @return iterable<string, array{string, string, callable(int): Leiden}> */
+    public static function fixturesAndObjectives(): iterable
+    {
+        foreach (GraphFixture::names() as $name) {
+            foreach (self::objectives() as [$objective, $factory]) {
+                yield "{$name}/{$objective}" => [$name, $objective, $factory];
+            }
+        }
+    }
+
+    /** @param callable(int): Leiden $factory */
+    #[DataProvider('fixturesAndObjectives')]
+    public function test_communities_are_connected_whatever_the_objective(
+        string $name,
+        string $objective,
+        callable $factory,
+    ): void {
+        $graph = GraphFixture::load($name)->graph();
+
+        for ($seed = 1; $seed <= 10; $seed++) {
+            foreach ($factory($seed)->partition($graph)->communities() as $index => $members) {
+                self::assertTrue(
+                    Connectivity::inducesConnectedSubgraph($graph, $members),
+                    "{$name}/{$objective}: seed {$seed} left community {$index} internally disconnected",
+                );
+            }
+        }
+    }
+
     #[DataProvider('fixtures')]
     public function test_every_community_it_returns_is_internally_connected(string $name): void
     {

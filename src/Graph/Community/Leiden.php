@@ -22,6 +22,7 @@ use Vegoia\Graph\Community\Quality\ConstantPotts;
 use Vegoia\Graph\Community\Quality\ErdosRenyiPotts;
 use Vegoia\Graph\Community\Quality\Modularity;
 use Vegoia\Graph\Community\Quality\QualityFunction;
+use Vegoia\Graph\Connectivity;
 use Vegoia\Graph\Graph;
 use Vegoia\Graph\Partition;
 
@@ -255,6 +256,17 @@ final class Leiden
                 'parts' => $refined,
             ];
 
+            // Refinement found nothing to group: aggregating would return the
+            // same graph and the next pass would repeat this one exactly.
+            // Without this the loop spins until maxIterations and exits
+            // without ever reaching the convergence condition -- which is what
+            // the connectivity guarantee rests on, since that condition means
+            // every community is a single aggregated node.
+            if ($refined->count() === $current->order()) {
+                $membership = $outer->membership();
+                break;
+            }
+
             [$aggregated, $aggregatedSizes, $induced] = $this->aggregate($current, $refined, $outer, $sizes);
 
             $refinedMembership = $refined->membership();
@@ -276,7 +288,71 @@ final class Leiden
             $result[] = $finalMembership[$node];
         }
 
-        return [Partition::fromMembership($result), $trace];
+        return [self::splitDisconnected($graph, Partition::fromMembership($result)), $trace];
+    }
+
+    /**
+     * Split any community that is not internally connected into its connected
+     * components.
+     *
+     * The guarantee normally falls out of the convergence condition -- the
+     * loop ends when every community is a single aggregated node, and an
+     * aggregated node is a connected subgraph by construction. But the loop
+     * can also end because refinement stalled or the iteration cap was hit,
+     * and then nothing has established it.
+     *
+     * Doing it here makes the guarantee structural instead of emergent, and it
+     * costs nothing in quality: a disconnected community's parts share no
+     * edges, so separating them leaves every internal weight where it was
+     * while strictly reducing the null-model penalty. Both modularity and CPM
+     * improve, never worsen.
+     */
+    private static function splitDisconnected(Graph $graph, Partition $partition): Partition
+    {
+        $membership = $partition->membership();
+        $next = $partition->count();
+        $changed = false;
+
+        foreach ($partition->communities() as $members) {
+            if (count($members) < 2 || Connectivity::inducesConnectedSubgraph($graph, $members)) {
+                continue;
+            }
+
+            $changed = true;
+            $inside = [];
+            foreach ($members as $node) {
+                $inside[$node] = true;
+            }
+
+            $seen = [];
+
+            foreach ($members as $root) {
+                if (isset($seen[$root])) {
+                    continue;
+                }
+
+                // The first component keeps the original label; each further
+                // one takes a fresh label beyond the current range.
+                $label = $seen === [] ? $membership[$root] : $next++;
+                $frontier = [$root];
+                $seen[$root] = true;
+
+                while ($frontier !== []) {
+                    $node = array_pop($frontier);
+                    $membership[$node] = $label;
+
+                    foreach ($graph->neighbours($node) as $neighbour => $_) {
+                        if (isset($inside[$neighbour]) && ! isset($seen[$neighbour])) {
+                            $seen[$neighbour] = true;
+                            $frontier[] = $neighbour;
+                        }
+                    }
+                }
+            }
+        }
+
+        /** @var list<int> $membership only values were reassigned */
+        return $changed ? Partition::fromMembership($membership) : $partition;
     }
 
     /**

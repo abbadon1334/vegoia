@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Vegoia\Graph\Community;
 
+use function array_values;
 use function count;
 use function log;
 use function max;
@@ -187,9 +188,10 @@ final class Agreement
             $joint[$community][$other] = ($joint[$community][$other] ?? 0) + 1;
         }
 
-        /** @var list<int> $sizesA */
-        /** @var list<int> $sizesB */
-        return [$sizesA, $sizesB, $joint, count($left)];
+        // Keyed by canonical community label, which Partition guarantees runs
+        // 0..k-1, so these are lists even though the analyser cannot see it
+        // through the accumulation above.
+        return [array_values($sizesA), array_values($sizesB), $joint, count($left)];
     }
 
     /** @param list<int> $sizes */

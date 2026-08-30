@@ -178,10 +178,13 @@ final class AgreementTest extends TestCase
 
         $entry = $data['cases'][$case];
 
+        /** @var float $expected */
+        $expected = $entry[$measure];
+
         return [
             Partition::fromMembership($entry['a']),
             Partition::fromMembership($entry['b']),
-            $entry[$measure],
+            $expected,
         ];
     }
 }

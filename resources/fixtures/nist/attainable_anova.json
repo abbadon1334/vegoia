@@ -1,0 +1,32 @@
+{
+ "datasets": {
+  "AtmWtAg": {
+   "fStatistic": 10.15497792219507,
+   "rSquared": 8.615704229722384,
+   "residualStandardDeviation": 11.205556250892151
+  },
+  "SiRstv": {
+   "fStatistic": 13.058158970739434,
+   "rSquared": 12.521710598305368,
+   "residualStandardDeviation": 13.412632636872733
+  },
+  "SmLs01": {
+   "fStatistic": 15.771659086605016,
+   "rSquared": 14.660596202681438,
+   "residualStandardDeviation": 15.857679757182947
+  },
+  "SmLs04": {
+   "fStatistic": 10.43230703755943,
+   "rSquared": 9.02841099587281,
+   "residualStandardDeviation": 10.587203561442898
+  },
+  "SmLs07": {
+   "fStatistic": 4.412723269252927,
+   "rSquared": 3.0080641808538324,
+   "residualStandardDeviation": 4.551743505525931
+  }
+ },
+ "generator": "scipy f_oneway with numpy 2.5.2, IEEE-754 binary64",
+ "meaning": "Log Relative Error an independent float64 implementation attains on each certified ANOVA value. Vegoia is required to match these.",
+ "regenerate": "python3 tools/generate_anova_attainable.py"
+}

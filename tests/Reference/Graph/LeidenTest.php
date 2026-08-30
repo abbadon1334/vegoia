@@ -154,6 +154,108 @@ final class LeidenTest extends TestCase
         }
     }
 
+    /**
+     * Refinement must actually refine.
+     *
+     * This test exists because its absence was a real hole. Every other
+     * assertion in this file passed with the refinement phase deleted -- with
+     * Leiden degraded to plain Louvain -- because on graphs whose structure is
+     * clear enough, Louvain reaches the same partition by a different route.
+     * The connectivity guarantee is real but does not discriminate here: none
+     * of the fixtures is one Louvain actually fails on.
+     *
+     * So the difference is asserted where it is unambiguous: refinement splits
+     * a community into well-connected parts and aggregates *those*, so at the
+     * first level the refined partition must be strictly finer than the
+     * communities local moving found. Skip refinement and the two are equal at
+     * every level.
+     */
+    #[DataProvider('fixturesWithStructure')]
+    public function test_refinement_splits_communities_before_aggregating(string $name): void
+    {
+        $graph = GraphFixture::load($name)->graph();
+
+        [, $trace] = Leiden::modularity(seed: 42)->partitionWithTrace($graph);
+
+        self::assertNotSame([], $trace, "{$name}: the algorithm never aggregated");
+
+        $refinedFiner = false;
+
+        foreach ($trace as $level) {
+            self::assertGreaterThanOrEqual(
+                $level['communities'],
+                $level['refined'],
+                "{$name}: level {$level['level']} refined into fewer parts than there are "
+                . 'communities, which is impossible for a sub-partition',
+            );
+
+            self::assertLessThanOrEqual(
+                $level['nodes'],
+                $level['refined'],
+                "{$name}: level {$level['level']} refined into more parts than there are nodes",
+            );
+
+            if ($level['refined'] > $level['communities']) {
+                $refinedFiner = true;
+            }
+        }
+
+        self::assertTrue(
+            $refinedFiner,
+            "{$name}: refinement never split a single community at any level -- "
+            . 'this is Louvain, not Leiden',
+        );
+    }
+
+    /**
+     * The fixtures on which refinement demonstrably has something to split,
+     * established by running it rather than assumed.
+     *
+     * Most fixtures are not on this list, and for good reason: where local
+     * moving already lands on communities that cannot be divided into
+     * well-connected parts -- ring_of_cliques, whose cliques are each already
+     * one -- refinement correctly finds nothing, and demanding a split there
+     * would assert something false.
+     *
+     * @return iterable<string, array{string}>
+     */
+    public static function fixturesWithStructure(): iterable
+    {
+        foreach (['zachary', 'lesmis', 'davis', 'grid_4x4'] as $name) {
+            yield $name => [$name];
+        }
+    }
+
+    public function test_the_trace_describes_the_aggregation_it_performed(): void
+    {
+        $graph = GraphFixture::load('lesmis')->graph();
+
+        [$partition, $trace] = Leiden::modularity(seed: 42)->partitionWithTrace($graph);
+
+        self::assertNotSame([], $trace);
+        self::assertSame(0, $trace[0]['level']);
+        self::assertSame($graph->order(), $trace[0]['nodes'], 'level 0 sees the original graph');
+
+        // Each level runs on the parts the previous one refined into.
+        for ($i = 1; $i < count($trace); $i++) {
+            self::assertSame(
+                $trace[$i - 1]['refined'],
+                $trace[$i]['nodes'],
+                "level {$i} must run on the previous level's refined parts",
+            );
+        }
+
+        self::assertLessThanOrEqual($trace[0]['nodes'], $partition->count());
+    }
+
+    public function test_an_empty_graph_traces_nothing(): void
+    {
+        [$partition, $trace] = Leiden::modularity()->partitionWithTrace(Graph::undirected(0));
+
+        self::assertSame(0, $partition->count());
+        self::assertSame([], $trace);
+    }
+
     public function test_the_same_seed_gives_the_same_partition(): void
     {
         $graph = GraphFixture::load('zachary')->graph();

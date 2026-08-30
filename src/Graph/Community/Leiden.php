@@ -145,12 +145,36 @@ final class Leiden
 
     public function partition(Graph $graph): Partition
     {
+        return $this->partitionWithTrace($graph)[0];
+    }
+
+    /**
+     * The partition, plus what the algorithm did to reach it.
+     *
+     * One entry per aggregation level: the size of the graph at that level,
+     * how many communities local moving found, and how many parts refinement
+     * split them into. `refined` above `communities` is the whole difference
+     * from Louvain -- it is the number of nodes the next level will have, and
+     * where it equals `communities` refinement found nothing to split, so the
+     * level behaved exactly as Louvain would.
+     *
+     * Useful for tuning -- a resolution that collapses everything at level 0
+     * is visible immediately -- and it is what makes the refinement phase
+     * observable to a test. Without it, an implementation that skipped
+     * refinement entirely still passed every assertion in this library, since
+     * on graphs whose structure is clear enough Louvain finds the same answer.
+     *
+     * @return array{Partition, list<array{level: int, nodes: int, communities: int, refined: int}>}
+     */
+    public function partitionWithTrace(Graph $graph): array
+    {
         $order = $graph->order();
 
         if ($order === 0) {
-            return Partition::fromMembership([]);
+            return [Partition::fromMembership([]), []];
         }
 
+        $trace = [];
         $randomizer = new Randomizer(new Xoshiro256StarStar($this->seed));
         $totalEndpointWeight = $graph->totalEndpointWeight();
 
@@ -173,6 +197,13 @@ final class Leiden
 
             $refined = $this->refine($current, $outer, $sizes, $totalEndpointWeight, $randomizer);
 
+            $trace[] = [
+                'level' => $iteration,
+                'nodes' => $current->order(),
+                'communities' => $outer->count(),
+                'refined' => $refined->count(),
+            ];
+
             [$aggregated, $aggregatedSizes, $induced] = $this->aggregate($current, $refined, $outer, $sizes);
 
             $refinedMembership = $refined->membership();
@@ -194,7 +225,7 @@ final class Leiden
             $result[] = $finalMembership[$node];
         }
 
-        return Partition::fromMembership($result);
+        return [Partition::fromMembership($result), $trace];
     }
 
     /**

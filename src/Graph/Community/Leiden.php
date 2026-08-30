@@ -174,6 +174,14 @@ final class Leiden
      */
     public function partitionWithTrace(Graph $graph): array
     {
+        // Refused rather than approximated. Modularity on a directed graph is
+        // the Leicht-Newman formula, which accounts for in- and out-degree
+        // separately; the undirected one runs happily on directed input and
+        // returns a partition that looks reasonable and means nothing.
+        if ($graph->isDirected()) {
+            throw InvalidArgument::directedNotSupported('Leiden community detection');
+        }
+
         $order = $graph->order();
 
         if ($order === 0) {

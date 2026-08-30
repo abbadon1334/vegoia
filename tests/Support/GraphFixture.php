@@ -81,6 +81,40 @@ final readonly class GraphFixture
         return self::namesFrom('labelled/index.json');
     }
 
+    public static function directed(string $name): self
+    {
+        return self::loadFrom("directed/{$name}.json");
+    }
+
+    /** @return list<string> */
+    public static function directedNames(): array
+    {
+        return self::namesFrom('directed/index.json');
+    }
+
+    public function directedGraph(): Graph
+    {
+        return Graph::directed($this->nodes, $this->edges);
+    }
+
+    /**
+     * The reference HITS scores, or null where the leading eigenvector is not
+     * unique and the measure is therefore undefined.
+     *
+     * @return array{list<float>, list<float>}|null
+     */
+    public function expectedHits(): ?array
+    {
+        /** @var array{hits_hubs: list<float>|null, hits_authorities: list<float>|null} $expected */
+        $expected = $this->expected;
+
+        if ($expected['hits_hubs'] === null || $expected['hits_authorities'] === null) {
+            return null;
+        }
+
+        return [$expected['hits_hubs'], $expected['hits_authorities']];
+    }
+
     /** @return list<int> */
     public function groundTruth(): array
     {

@@ -1,0 +1,51 @@
+{
+ "directed": true,
+ "edges": [
+  [
+   0,
+   1,
+   1.0
+  ],
+  [
+   1,
+   0,
+   1.0
+  ],
+  [
+   2,
+   3,
+   1.0
+  ]
+ ],
+ "expected": {
+  "betweenness": [
+   0.0,
+   0.0,
+   0.0,
+   0.0
+  ],
+  "hits_authorities": null,
+  "hits_hubs": null,
+  "in_degree": [
+   1.0,
+   1.0,
+   0.0,
+   1.0
+  ],
+  "out_degree": [
+   1.0,
+   1.0,
+   1.0,
+   0.0
+  ],
+  "pagerank": [
+   0.4119464469610812,
+   0.4119464469610812,
+   0.06179196704474123,
+   0.11431513903309645
+  ]
+ },
+ "name": "two_components",
+ "nodes": 4,
+ "note": "Disconnected and directed: PageRank's teleportation has to carry it."
+}

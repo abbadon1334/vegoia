@@ -1,0 +1,27 @@
+[
+ {
+  "name": "hub_and_authority",
+  "nodes": 6,
+  "edges": 7
+ },
+ {
+  "name": "star_out",
+  "nodes": 5,
+  "edges": 4
+ },
+ {
+  "name": "bow_tie",
+  "nodes": 6,
+  "edges": 6
+ },
+ {
+  "name": "chain",
+  "nodes": 4,
+  "edges": 3
+ },
+ {
+  "name": "two_components",
+  "nodes": 4,
+  "edges": 3
+ }
+]

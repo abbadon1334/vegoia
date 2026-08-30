@@ -7,6 +7,7 @@ namespace Vegoia\Graph\Centrality;
 use function abs;
 use function array_fill;
 use function array_sum;
+use function array_values;
 use function count;
 
 use Vegoia\Exception\InvalidArgument;
@@ -85,14 +86,8 @@ final readonly class Hits
                 $nextHubs[$node] = $sum;
             }
 
-            /**
-             * Both are array_fill over 0..order-1 with indexed writes only.
-             *
-             * @var list<float> $nextAuthorities
-             * @var list<float> $nextHubs
-             */
-            $nextAuthorities = self::normalise($nextAuthorities);
-            $nextHubs = self::normalise($nextHubs);
+            $nextAuthorities = self::normalise(array_values($nextAuthorities));
+            $nextHubs = self::normalise(array_values($nextHubs));
 
             $drift = 0.0;
 

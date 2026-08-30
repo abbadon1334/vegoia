@@ -226,6 +226,97 @@ final class LeidenTest extends TestCase
         }
     }
 
+    /**
+     * The gamma-connectivity condition, checked on the parts refinement
+     * produced.
+     *
+     * Refinement may only merge into a part that is already well connected to
+     * the rest of its community:
+     *
+     *     E(C, S \ C)  >=  y * ||C|| * (||S|| - ||C||) / 2m
+     *
+     * where ||.|| is strength under modularity. This is what stops a
+     * community being welded together through a node that does not belong in
+     * it, and it is the condition the whole guarantee rests on.
+     *
+     * Asserted here because deleting the check left every other test green:
+     * dropping it does not produce disconnected communities, it quietly
+     * weakens a guarantee, which is exactly the kind of regression that
+     * survives a suite that only looks at outputs.
+     */
+    #[DataProvider('fixturesWithStructure')]
+    public function test_refined_parts_satisfy_gamma_connectivity(string $name): void
+    {
+        $resolution = 1.0;
+        [, $trace] = Leiden::modularity($resolution, seed: 42)
+            ->partitionWithTrace(GraphFixture::load($name)->graph());
+
+        $checked = 0;
+
+        foreach ($trace as $level) {
+            $graph = $level['graph'];
+            $twoM = $graph->totalEndpointWeight();
+
+            foreach ($level['partition']->communities() as $community) {
+                $inside = [];
+                $subsetStrength = 0.0;
+
+                foreach ($community as $node) {
+                    $inside[$node] = true;
+                    $subsetStrength += $graph->strength($node);
+                }
+
+                // Group this community's nodes by the refined part they landed in.
+                $parts = [];
+
+                foreach ($community as $node) {
+                    $parts[$level['parts']->communityOf($node)][] = $node;
+                }
+
+                foreach ($parts as $members) {
+                    // A part that is still the whole community has no rest to
+                    // be connected to, and the condition is vacuous.
+                    if (count($members) === count($community)) {
+                        continue;
+                    }
+
+                    $partStrength = 0.0;
+                    $toRest = 0.0;
+
+                    foreach ($members as $node) {
+                        $partStrength += $graph->strength($node);
+
+                        foreach ($graph->neighbours($node) as $neighbour => $weight) {
+                            if (isset($inside[$neighbour]) && ! in_array($neighbour, $members, true)) {
+                                $toRest += $weight;
+                            }
+                        }
+                    }
+
+                    $threshold = $resolution * $partStrength * ($subsetStrength - $partStrength) / $twoM;
+
+                    self::assertGreaterThanOrEqual(
+                        $threshold - 1.0e-9,
+                        $toRest,
+                        sprintf(
+                            '%s level %d: a refined part of %d nodes has weight %.6f to the rest '
+                            . 'of its community but gamma-connectivity requires %.6f',
+                            $name,
+                            $level['level'],
+                            count($members),
+                            $toRest,
+                            $threshold,
+                        ),
+                    );
+
+                    $checked++;
+                }
+            }
+        }
+
+        self::assertGreaterThan(0, $checked, "{$name}: no refined part was actually checked");
+    }
+
     public function test_the_trace_describes_the_aggregation_it_performed(): void
     {
         $graph = GraphFixture::load('lesmis')->graph();

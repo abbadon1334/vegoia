@@ -164,7 +164,13 @@ final class Leiden
      * refinement entirely still passed every assertion in this library, since
      * on graphs whose structure is clear enough Louvain finds the same answer.
      *
-     * @return array{Partition, list<array{level: int, nodes: int, communities: int, refined: int}>}
+     * Each entry also carries the level's graph and both partitions. They are
+     * objects that already exist at that point, so this costs a reference and
+     * not a computation, and it lets a caller -- or a test -- check the
+     * gamma-connectivity condition refinement is supposed to enforce, which is
+     * otherwise invisible from outside.
+     *
+     * @return array{Partition, list<array{level: int, nodes: int, communities: int, refined: int, graph: Graph, partition: Partition, parts: Partition}>}
      */
     public function partitionWithTrace(Graph $graph): array
     {
@@ -202,6 +208,9 @@ final class Leiden
                 'nodes' => $current->order(),
                 'communities' => $outer->count(),
                 'refined' => $refined->count(),
+                'graph' => $current,
+                'partition' => $outer,
+                'parts' => $refined,
             ];
 
             [$aggregated, $aggregatedSizes, $induced] = $this->aggregate($current, $refined, $outer, $sizes);

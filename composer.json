@@ -1,0 +1,42 @@
+{
+    "name": "abbadon1334/vegoia",
+    "description": "Graph algorithms and statistics for PHP. Leiden community detection, centrality, shortest paths and NIST-verified statistics, with zero runtime dependencies.",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "graph", "leiden", "louvain", "community-detection", "modularity", "cpm",
+        "statistics", "pagerank", "centrality", "betweenness", "graphrag", "rag"
+    ],
+    "authors": [
+        { "name": "Francesco Danti", "email": "fdanti@gmail.com" }
+    ],
+    "require": {
+        "php": ">=8.5"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^12.5",
+        "phpstan/phpstan": "^2.1",
+        "laravel/pint": "^1.27"
+    },
+    "autoload": {
+        "psr-4": { "Vegoia\\": "src/" }
+    },
+    "autoload-dev": {
+        "psr-4": { "Vegoia\\Tests\\": "tests/" }
+    },
+    "scripts": {
+        "test": "phpunit",
+        "test:unit": "phpunit --testsuite unit",
+        "test:reference": "phpunit --testsuite reference",
+        "stan": "phpstan analyse",
+        "fmt": "pint",
+        "fmt:check": "pint --test",
+        "check": ["@fmt:check", "@stan", "@test"]
+    },
+    "config": {
+        "sort-packages": true,
+        "optimize-autoloader": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}

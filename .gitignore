@@ -1,0 +1,14 @@
+/vendor/
+/build/
+
+# Composer resolves a library's dependencies against the *consuming* project,
+# so a committed lock file here would be ignored by everyone installing it and
+# misleading to everyone reading it. Applications commit theirs; libraries do not.
+/composer.lock
+
+# Tool caches. PHPUnit 10+ writes .phpunit.result.cache next to the config
+# unless cacheDirectory is set, so both spellings are covered.
+/.phpunit.cache/
+/.phpunit.result.cache
+/.php-cs-fixer.cache
+/.phpstan.cache/

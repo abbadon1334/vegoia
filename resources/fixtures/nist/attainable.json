@@ -1,0 +1,52 @@
+{
+ "datasets": {
+  "Lew": {
+   "autocorrelation": 14.743189110557413,
+   "mean": null,
+   "stdDev": 15.387290060315811
+  },
+  "Lottery": {
+   "autocorrelation": 14.898888000191269,
+   "mean": 15.182301368892213,
+   "stdDev": 15.409225836920749
+  },
+  "Mavro": {
+   "autocorrelation": 14.100712797766718,
+   "mean": 15.65396261291811,
+   "stdDev": 13.121800790316476
+  },
+  "Michelso": {
+   "autocorrelation": 13.435132339687632,
+   "mean": null,
+   "stdDev": 13.84687981128875
+  },
+  "NumAcc1": {
+   "autocorrelation": null,
+   "mean": null,
+   "stdDev": null
+  },
+  "NumAcc2": {
+   "autocorrelation": null,
+   "mean": null,
+   "stdDev": 15.857679757182947
+  },
+  "NumAcc3": {
+   "autocorrelation": 11.933462579734957,
+   "mean": 15.933989943770268,
+   "stdDev": 9.456868498647856
+  },
+  "NumAcc4": {
+   "autocorrelation": 10.729440953886588,
+   "mean": 15.729869882941344,
+   "stdDev": 8.25274862385012
+  },
+  "PiDigits": {
+   "autocorrelation": 15.612149540417237,
+   "mean": null,
+   "stdDev": 15.207948838453612
+  }
+ },
+ "generator": "numpy 2.5.2, IEEE-754 binary64",
+ "meaning": "Log Relative Error an independent float64 implementation attains on each certified value. null means it was hit exactly. Vegoia is required to match these, so the thresholds track the limits of the arithmetic rather than the limits of our patience.",
+ "regenerate": "python3 tools/generate_nist_attainable.py"
+}

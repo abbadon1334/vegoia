@@ -19,6 +19,7 @@ use function range;
 
 use Vegoia\Exception\InvalidArgument;
 use Vegoia\Graph\Community\Quality\ConstantPotts;
+use Vegoia\Graph\Community\Quality\ErdosRenyiPotts;
 use Vegoia\Graph\Community\Quality\Modularity;
 use Vegoia\Graph\Community\Quality\QualityFunction;
 use Vegoia\Graph\Graph;
@@ -72,7 +73,7 @@ final class Leiden
     public const int DEFAULT_MAX_ITERATIONS = 32;
 
     public function __construct(
-        private readonly QualityFunction $objective = new Modularity(),
+        private QualityFunction $objective = new Modularity(),
         private readonly int $seed = 0,
         private readonly float $randomness = self::DEFAULT_RANDOMNESS,
         private readonly int $maxIterations = self::DEFAULT_MAX_ITERATIONS,
@@ -102,6 +103,30 @@ final class Leiden
         return new self(new ConstantPotts($resolution), $seed);
     }
 
+    /**
+     * Optimise CPM against an Erdos-Renyi null model -- leidenalg's RBER.
+     * Like CPM, but with the resolution scaled by the graph's own density, so
+     * the same value means the same thing across graphs of different density.
+     */
+    public static function erdosRenyiPotts(float $resolution = 1.0, int $seed = 0): self
+    {
+        return new self(new ErdosRenyiPotts($resolution), $seed);
+    }
+
+    /**
+     * leidenalg's RBConfigurationVertexPartition, which is modularity with a
+     * resolution parameter -- exactly what Modularity already is. Provided so
+     * that code being ported from Python finds the name it is looking for
+     * instead of concluding the objective is missing.
+     *
+     * The only difference is normalisation: leidenalg reports the quantity
+     * unnormalised, which is this one times 2m.
+     */
+    public static function reichardtBornholdt(float $resolution = 1.0, int $seed = 0): self
+    {
+        return self::modularity($resolution, $seed);
+    }
+
     public function objective(): QualityFunction
     {
         return $this->objective;
@@ -122,7 +147,7 @@ final class Leiden
     {
         return match ($this->objective::class) {
             Modularity::class => 1,
-            ConstantPotts::class => 2,
+            ConstantPotts::class, ErdosRenyiPotts::class => 2,
             default => 0,
         };
     }
@@ -138,6 +163,12 @@ final class Leiden
             return $totalEndpointWeight > 0.0
                 ? $this->objective->resolution() / $totalEndpointWeight
                 : 0.0;
+        }
+
+        // CPM and RBER share a gain shape; RBER simply scales the resolution
+        // by the density it bound when it saw the graph.
+        if ($this->objective instanceof ErdosRenyiPotts) {
+            return $this->objective->resolution() * $this->objective->density();
         }
 
         return $this->objective->resolution();
@@ -187,6 +218,9 @@ final class Leiden
         if ($order === 0) {
             return [Partition::fromMembership([]), []];
         }
+
+        // Objectives with a graph-level constant get to see the graph once.
+        $this->objective = $this->objective->boundTo($graph);
 
         $trace = [];
         $randomizer = new Randomizer(new Xoshiro256StarStar($this->seed));

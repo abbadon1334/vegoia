@@ -5,22 +5,33 @@ declare(strict_types=1);
 namespace Vegoia\Graph\Community\Quality;
 
 use Vegoia\Graph\Graph;
-use Vegoia\Graph\Partition;
 
 /**
- * The objective a community-detection run is trying to maximise.
+ * An objective a community-detection run can maximise.
  *
  * Leiden is indifferent to which objective it optimises, so the objective is
  * an interface rather than a branch inside the algorithm. Everything the
  * search needs is expressed here in four operations, all of which must be O(1)
  * because the inner loop calls them once per candidate community per node.
  */
-interface QualityFunction
+interface QualityFunction extends PartitionScore
 {
     public function resolution(): float;
 
-    /** The objective's value for a whole partition. */
-    public function of(Graph $graph, Partition $partition): float;
+    /**
+     * Bind whatever this objective needs from the graph before optimisation.
+     *
+     * gain() is given only local quantities, because passing the graph into a
+     * call made millions of times per run would be absurd. An objective whose
+     * formula involves a graph-level constant -- ErdosRenyiPotts needs the
+     * density -- therefore cannot compute its own gain until it has seen the
+     * graph. This is where it gets to look, once, and return an instance that
+     * can.
+     *
+     * Objectives with no such constant return themselves, which is the
+     * default and costs nothing.
+     */
+    public function boundTo(Graph $graph): self;
 
     /**
      * How much better the objective gets when a node joins a community.

@@ -367,6 +367,36 @@ final class LeidenTest extends TestCase
         self::assertSame(5, $partition->count());
     }
 
+    /**
+     * RBER optimises, not merely scores. It reaches the objective through the
+     * binding step rather than the constructor, so a run that silently used an
+     * unbound density -- or threw -- would be a live failure mode.
+     */
+    public function test_erdos_renyi_potts_can_be_optimised(): void
+    {
+        $graph = GraphFixture::load('zachary')->graph();
+
+        $partition = Leiden::erdosRenyiPotts(resolution: 1.0, seed: 42)->partition($graph);
+
+        self::assertGreaterThan(1, $partition->count());
+        self::assertSame($graph->order(), $partition->order());
+
+        foreach ($partition->communities() as $members) {
+            self::assertTrue(Connectivity::inducesConnectedSubgraph($graph, $members));
+        }
+    }
+
+    /** leidenalg's RBConfiguration is modularity with a resolution parameter. */
+    public function test_reichardt_bornholdt_is_modularity_under_another_name(): void
+    {
+        $graph = GraphFixture::load('zachary')->graph();
+
+        self::assertTrue(
+            Leiden::reichardtBornholdt(0.7, seed: 3)->partition($graph)
+                ->equals(Leiden::modularity(0.7, seed: 3)->partition($graph)),
+        );
+    }
+
     public function test_an_empty_graph_yields_an_empty_partition(): void
     {
         self::assertSame(0, Leiden::modularity()->partition(Graph::undirected(0))->count());

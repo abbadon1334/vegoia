@@ -166,6 +166,17 @@ def quality_probes(g: ig.Graph) -> dict:
             total += w - resolution * k * (k - 1) / 2
         return total
 
+    def quality_of(partition_class, membership, **kwargs):
+        """leidenalg reports UNNORMALISED quality: modularity times 2m, and so
+        on. Recorded raw so the PHP side can be compared on its own terms after
+        the documented rescaling, rather than through a conversion buried in a
+        test."""
+        try:
+            p = partition_class(g, initial_membership=list(membership), **kwargs)
+            return p.quality()
+        except Exception as exc:                       # pragma: no cover
+            return {"error": str(exc)}
+
     probes = {}
     for label, membership in (("singletons", singletons),
                               ("single_community", single),
@@ -177,6 +188,17 @@ def quality_probes(g: ig.Graph) -> dict:
                 for r in (0.5, 1.0, 2.0)
             },
             "cpm": {str(r): cpm(list(membership), r) for r in (0.05, 0.5, 1.0)},
+            # Reichardt-Bornholdt with an Erdos-Renyi null model: like CPM but
+            # with the resolution scaled by the graph's own density.
+            "rber": {
+                str(r): quality_of(leidenalg.RBERVertexPartition, membership,
+                                   weights=w, resolution_parameter=r)
+                for r in (0.5, 1.0, 2.0)
+            },
+            # Surprise and Significance are defined on unweighted graphs only;
+            # leidenalg takes no weights for them.
+            "surprise": quality_of(leidenalg.SurpriseVertexPartition, membership),
+            "significance": quality_of(leidenalg.SignificanceVertexPartition, membership),
         }
     return probes
 

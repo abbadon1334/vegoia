@@ -110,6 +110,13 @@ final class LeidenPathEquivalenceTest extends TestCase
                 return $this->inner->resolution();
             }
 
+            public function boundTo(Graph $graph): QualityFunction
+            {
+                // Stay opaque after binding, or the wrapper would hand Leiden
+                // back the very class the fast path recognises.
+                return new self($this->inner->boundTo($graph));
+            }
+
             public function of(Graph $graph, Partition $partition): float
             {
                 return $this->inner->of($graph, $partition);

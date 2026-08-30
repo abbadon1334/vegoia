@@ -43,6 +43,12 @@ final readonly class Modularity implements QualityFunction
         return $this->resolution;
     }
 
+    /** Nothing graph-level enters this formula. */
+    public function boundTo(Graph $graph): self
+    {
+        return $this;
+    }
+
     public function of(Graph $graph, Partition $partition): float
     {
         $twoM = $graph->totalEndpointWeight();

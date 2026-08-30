@@ -43,7 +43,10 @@ final class CentralityTest extends TestCase
     public function test_pagerank_agrees_with_networkx(string $name): void
     {
         $fixture = GraphFixture::load($name);
-        $scores = (new PageRank(damping: 0.85, tolerance: 1.0e-14))->of($fixture->graph());
+        // Damping is deliberately NOT passed: the fixtures are generated at
+        // networkx's 0.85, so leaving it to the default is what pins the
+        // default. Passing it explicitly here let a wrong default ship.
+        $scores = (new PageRank(tolerance: 1.0e-14))->of($fixture->graph());
         $expected = $fixture->expectedVector('pagerank');
 
         foreach ($expected as $node => $value) {
@@ -116,6 +119,26 @@ final class CentralityTest extends TestCase
         foreach (Betweenness::of(Graph::undirected(6, $edges)) as $node => $score) {
             self::assertSame(0.0, $score, "node {$node}: every pair is already adjacent");
         }
+    }
+
+    /**
+     * Damping has a conventional value, and a library that silently used
+     * another would produce rankings nobody could reconcile with anyone
+     * else's -- while still summing to 1 and still looking plausible.
+     */
+    public function test_the_default_damping_is_the_conventional_zero_point_eight_five(): void
+    {
+        $graph = GraphFixture::load('zachary')->graph();
+
+        self::assertSame(
+            (new PageRank(damping: 0.85))->of($graph),
+            (new PageRank())->of($graph),
+        );
+
+        self::assertNotEquals(
+            (new PageRank(damping: 0.5))->of($graph),
+            (new PageRank())->of($graph),
+        );
     }
 
     public function test_centrality_of_an_empty_graph_is_an_empty_vector(): void

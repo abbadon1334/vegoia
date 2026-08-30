@@ -93,6 +93,11 @@ final class KCore
             }
 
             $node = array_key_first($buckets[$level]);
+
+            if ($node === null) {
+                break;
+            }
+
             unset($buckets[$level][$node]);
             $removed[$node] = true;
             $core[$node] = $level;
@@ -114,6 +119,7 @@ final class KCore
             }
         }
 
+        /** @var list<int> $core */
         return $core;
     }
 

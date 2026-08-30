@@ -54,6 +54,7 @@ final class Harmonic
             $score[$node] = $sum->value();
         }
 
+        /** @var list<float> $score */
         return $score;
     }
 }

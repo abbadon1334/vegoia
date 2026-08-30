@@ -80,6 +80,7 @@ final class Clustering
             }
         }
 
+        /** @var list<int> $count */
         return $count;
     }
 
@@ -120,6 +121,7 @@ final class Clustering
             $coefficient[$node] = 2.0 * $triangles[$node] / ($degree * ($degree - 1));
         }
 
+        /** @var list<float> $coefficient */
         return $coefficient;
     }
 

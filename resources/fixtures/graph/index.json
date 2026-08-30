@@ -1,0 +1,79 @@
+[
+ {
+  "name": "zachary",
+  "file": "zachary.json",
+  "nodes": 34,
+  "edges": 78,
+  "note": "Zachary 1977. The canonical community-detection benchmark; max known modularity 0.4198."
+ },
+ {
+  "name": "florentine",
+  "file": "florentine.json",
+  "nodes": 15,
+  "edges": 20,
+  "note": "Padgett & Ansell 1993. Small and disconnected-adjacent: good for edge cases."
+ },
+ {
+  "name": "davis",
+  "file": "davis.json",
+  "nodes": 32,
+  "edges": 89,
+  "note": "Davis 1941. Bipartite, so community structure is a known trap."
+ },
+ {
+  "name": "lesmis",
+  "file": "lesmis.json",
+  "nodes": 77,
+  "edges": 254,
+  "note": "Knuth 1993. Weighted co-appearance graph; exercises the weighted paths."
+ },
+ {
+  "name": "petersen",
+  "file": "petersen.json",
+  "nodes": 10,
+  "edges": 15,
+  "note": "Vertex-transitive: every node has identical centrality, so any asymmetry is a bug."
+ },
+ {
+  "name": "star_10",
+  "file": "star_10.json",
+  "nodes": 10,
+  "edges": 9,
+  "note": "Closed form: hub betweenness = (n-1)(n-2)/2 = 36. Checkable by hand."
+ },
+ {
+  "name": "path_10",
+  "file": "path_10.json",
+  "nodes": 10,
+  "edges": 9,
+  "note": "Closed form for distances and betweenness. Checkable by hand."
+ },
+ {
+  "name": "complete_8",
+  "file": "complete_8.json",
+  "nodes": 8,
+  "edges": 28,
+  "note": "All betweenness zero, all distances 1. Degenerate on purpose."
+ },
+ {
+  "name": "grid_4x4",
+  "file": "grid_4x4.json",
+  "nodes": 16,
+  "edges": 24,
+  "note": "Regular lattice with no community structure: guards against inventing one."
+ },
+ {
+  "name": "ring_of_cliques_10x5",
+  "file": "ring_of_cliques_10x5.json",
+  "nodes": 50,
+  "edges": 110,
+  "note": "Fortunato & Barthelemy 2007 resolution limit. Ground truth is the 10 cliques."
+ },
+ {
+  "name": "disjoint_cliques",
+  "file": "disjoint_cliques.json",
+  "nodes": 12,
+  "edges": 19,
+  "note": "Three separated cliques. Exact expected partition, not an envelope."
+ }
+]

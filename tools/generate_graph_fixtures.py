@@ -91,6 +91,14 @@ def from_networkx(G: nx.Graph) -> tuple[ig.Graph, list[list]]:
     return g, edges
 
 
+def katz_alpha(G: nx.Graph, weighted: bool) -> float:
+    """Half of 1 / lambda_max: safely convergent, and not so small that every
+    node collapses onto the beta baseline."""
+    import numpy as np
+    A = nx.to_numpy_array(G, weight="weight" if weighted else None)
+    return 0.5 / float(max(abs(np.linalg.eigvalsh(A))))
+
+
 def centralities(G: nx.Graph, n: int) -> dict:
     """Reference centralities. Conventions are pinned and documented here."""
     weighted = any("weight" in d for _, _, d in G.edges(data=True))
@@ -105,6 +113,29 @@ def centralities(G: nx.Graph, n: int) -> dict:
     out = {
         # power iteration, alpha=0.85, dangling mass spread uniformly, sums to 1
         "pagerank": vec(nx.pagerank(G, alpha=0.85, tol=1.0e-12, max_iter=1000)),
+        # L2-normalised principal eigenvector of the adjacency matrix.
+        # weight is passed explicitly: networkx defaults eigenvector_centrality
+        # to weight=None while defaulting pagerank to weight="weight", an
+        # inconsistency on their side. Vegoia uses weights throughout, so the
+        # fixture is generated the weighted way.
+        "eigenvector": vec(nx.eigenvector_centrality(
+            G, max_iter=10000, tol=1.0e-12, weight="weight" if weighted else None)),
+        # sum of 1/d over reachable nodes; unreachable contribute nothing
+        "harmonic": vec(nx.harmonic_centrality(G)),
+        # Katz needs alpha below 1/lambda_max or the series diverges -- longer
+        # walks would outweigh shorter ones, which is not a centrality. A fixed
+        # alpha cannot serve every graph: on the weighted ones lambda_max is
+        # large enough that 0.05 already diverges. Half the critical value is
+        # used instead, and recorded, so the fixture is meaningful per graph.
+        "katz": vec(nx.katz_centrality_numpy(
+            G, alpha=katz_alpha(G, weighted), beta=1.0,
+            weight="weight" if weighted else None)),
+        # local clustering coefficient
+        "clustering": vec(nx.clustering(G)),
+        # triangles through each node
+        "triangles": vec(nx.triangles(G)),
+        # k-core number
+        "core_number": vec(nx.core_number(G)),
         # Brandes, NOT normalised; undirected pair counted once
         "betweenness": vec(nx.betweenness_centrality(G, normalized=False)),
         # Wasserman-Faust correction, so disconnected graphs stay meaningful
@@ -115,6 +146,7 @@ def centralities(G: nx.Graph, n: int) -> dict:
         out["betweenness_weighted"] = vec(
             nx.betweenness_centrality(G, normalized=False, weight="weight")
         )
+    out["katz_alpha"] = [katz_alpha(G, weighted)] * n
     return out
 
 
@@ -216,6 +248,9 @@ def build(name: str, G: nx.Graph, source: str, note: str = "") -> dict:
         "expected": {
             "components": nx.number_connected_components(G),
             "density": nx.density(G),
+            "transitivity": nx.transitivity(G),
+            "average_clustering": nx.average_clustering(G),
+            "triangle_total": sum(nx.triangles(G).values()) // 3,
             "centrality": centralities(G, n),
             "paths": shortest_paths(G, n),
             "quality_probes": quality_probes(g),

@@ -1,0 +1,26 @@
+[
+ {
+  "name": "lfr_400_mu01",
+  "nodes": 400,
+  "edges": 1776,
+  "communities": 8
+ },
+ {
+  "name": "lfr_400_mu03",
+  "nodes": 400,
+  "edges": 1746,
+  "communities": 8
+ },
+ {
+  "name": "lfr_400_mu05",
+  "nodes": 400,
+  "edges": 1783,
+  "communities": 8
+ },
+ {
+  "name": "email_eu_core",
+  "nodes": 1005,
+  "edges": 16064,
+  "communities": 42
+ }
+]

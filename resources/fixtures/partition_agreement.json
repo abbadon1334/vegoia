@@ -1,0 +1,190 @@
+{
+ "cases": {
+  "all_singletons_vs_one": {
+   "a": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "ari": 0.0,
+   "b": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "nmi": 0.0
+  },
+  "identical": {
+   "a": [
+    0,
+    0,
+    1,
+    1,
+    2,
+    2
+   ],
+   "ari": 1.0,
+   "b": [
+    0,
+    0,
+    1,
+    1,
+    2,
+    2
+   ],
+   "nmi": 1.0
+  },
+  "merged": {
+   "a": [
+    0,
+    0,
+    1,
+    1
+   ],
+   "ari": 0.0,
+   "b": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "nmi": 0.0
+  },
+  "one_node": {
+   "a": [
+    0
+   ],
+   "ari": 1.0,
+   "b": [
+    0
+   ],
+   "nmi": 1.0
+  },
+  "one_pair_moved": {
+   "a": [
+    0,
+    0,
+    1,
+    1,
+    2,
+    2
+   ],
+   "ari": 0.4444444444444444,
+   "b": [
+    0,
+    0,
+    1,
+    2,
+    2,
+    2
+   ],
+   "nmi": 0.7396673768007592
+  },
+  "orthogonal": {
+   "a": [
+    0,
+    0,
+    1,
+    1
+   ],
+   "ari": -0.5,
+   "b": [
+    0,
+    1,
+    0,
+    1
+   ],
+   "nmi": 0.0
+  },
+  "relabelled": {
+   "a": [
+    0,
+    0,
+    1,
+    1,
+    2,
+    2
+   ],
+   "ari": 1.0,
+   "b": [
+    5,
+    5,
+    9,
+    9,
+    1,
+    1
+   ],
+   "nmi": 1.0
+  },
+  "single_community_both": {
+   "a": [
+    0,
+    0,
+    0
+   ],
+   "ari": 1.0,
+   "b": [
+    0,
+    0,
+    0
+   ],
+   "nmi": 1.0
+  },
+  "singletons_vs_singletons": {
+   "a": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "ari": 1.0,
+   "b": [
+    3,
+    2,
+    1,
+    0
+   ],
+   "nmi": 1.0
+  },
+  "split_in_two": {
+   "a": [
+    0,
+    0,
+    0,
+    0
+   ],
+   "ari": 0.0,
+   "b": [
+    0,
+    0,
+    1,
+    1
+   ],
+   "nmi": 0.0
+  },
+  "uneven": {
+   "a": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    1
+   ],
+   "ari": 0.0,
+   "b": [
+    0,
+    0,
+    0,
+    1,
+    1,
+    1
+   ],
+   "nmi": 0.2313598919830773
+  }
+ },
+ "generator": "scikit-learn, normalized_mutual_info_score(average_method='arithmetic') and adjusted_rand_score",
+ "regenerate": "python3 tools/generate_agreement_fixtures.py"
+}

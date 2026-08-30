@@ -13,6 +13,7 @@ use const JSON_THROW_ON_ERROR;
 
 use RuntimeException;
 use Vegoia\Graph\Graph;
+use Vegoia\Graph\Partition;
 
 /**
  * A golden fixture produced by `tools/generate_graph_fixtures.py`.
@@ -39,12 +40,17 @@ final readonly class GraphFixture
 
     public static function load(string $name): self
     {
-        $path = Paths::fixture("graph/{$name}.json");
+        return self::loadFrom("graph/{$name}.json");
+    }
+
+    private static function loadFrom(string $relative): self
+    {
+        $path = Paths::fixture($relative);
         $raw = file_get_contents($path);
 
         if ($raw === false) {
             throw new RuntimeException(
-                "Missing graph fixture {$path}. Run: python3 tools/generate_graph_fixtures.py"
+                "Missing graph fixture {$path}. Regenerate it with the matching script in tools/."
             );
         }
 
@@ -54,14 +60,67 @@ final readonly class GraphFixture
             throw new RuntimeException("Malformed graph fixture {$path}");
         }
 
-        /** @var array{name: string, note: string, nodes: int, edges: list<array{int, int, float}>, expected: array<string, mixed>} $data */
-        return new self($data['name'], $data['note'], $data['nodes'], $data['edges'], $data['expected']);
+        /** @var array{name: string, note: string, nodes: int, edges: list<array{int, int, float}>, expected?: array<string, mixed>} $data */
+        // Labelled fixtures put their expectations at the top level rather
+        // than under 'expected', since the ground truth is the fixture's
+        // point rather than one property of it.
+        $expected = $data['expected'] ?? $data;
+
+        return new self($data['name'], $data['note'], $data['nodes'], $data['edges'], $expected);
+    }
+
+    /** A fixture that carries the answer, not just a reference implementation's opinion of it. */
+    public static function labelled(string $name): self
+    {
+        return self::loadFrom("labelled/{$name}.json");
+    }
+
+    /** @return list<string> */
+    public static function labelledNames(): array
+    {
+        return self::namesFrom('labelled/index.json');
+    }
+
+    /** @return list<int> */
+    public function groundTruth(): array
+    {
+        /** @var array{ground_truth?: list<int>} $expected */
+        $expected = $this->expected;
+
+        return $expected['ground_truth']
+            ?? throw new RuntimeException("Fixture {$this->name} carries no ground truth");
+    }
+
+    /**
+     * What leidenalg recovers of the ground truth, over many seeds. The bar
+     * for this library is that band, not perfection: on a real graph nobody
+     * recovers the truth exactly, and a test demanding it would only be
+     * satisfiable by overfitting.
+     *
+     * @return array{nmi: array{min: float, max: float, mean: float}, ari: array{min: float, max: float, mean: float}, communities: array{min: int, max: int}, modularity: array{min: float, max: float}}
+     */
+    public function referenceScores(): array
+    {
+        /** @var array{reference?: array<string, mixed>} $expected */
+        $expected = $this->expected;
+
+        /** @var array{nmi: array{min: float, max: float, mean: float}, ari: array{min: float, max: float, mean: float}, communities: array{min: int, max: int}, modularity: array{min: float, max: float}} $reference */
+        $reference = $expected['reference']
+            ?? throw new RuntimeException("Fixture {$this->name} carries no reference scores");
+
+        return $reference;
     }
 
     /** @return list<string> */
     public static function names(): array
     {
-        $path = Paths::fixture('graph/index.json');
+        return self::namesFrom('graph/index.json');
+    }
+
+    /** @return list<string> */
+    private static function namesFrom(string $relative): array
+    {
+        $path = Paths::fixture($relative);
         $raw = file_get_contents($path);
 
         if ($raw === false) {
@@ -77,6 +136,11 @@ final readonly class GraphFixture
     public function graph(): Graph
     {
         return Graph::undirected($this->nodes, $this->edges);
+    }
+
+    public function groundTruthPartition(): Partition
+    {
+        return Partition::fromMembership($this->groundTruth());
     }
 
     /** @return list<float> */

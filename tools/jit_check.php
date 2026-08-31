@@ -42,6 +42,7 @@ use Vegoia\Graph\Centrality\Katz;
 use Vegoia\Graph\Centrality\PageRank;
 use Vegoia\Graph\Clustering;
 use Vegoia\Graph\Community\Agreement;
+use Vegoia\Graph\Community\LabelPropagation;
 use Vegoia\Graph\Community\Leiden;
 use Vegoia\Graph\Community\Quality\ConstantPotts;
 use Vegoia\Graph\Community\Quality\ErdosRenyiPotts;
@@ -142,6 +143,10 @@ echo md5(json_encode([
     'components' => Connectivity::components($graph)->membership(),
     'bfs' => $g(BreadthFirst::distancesFrom($graph, 0)),
     'dijkstra' => $g(Dijkstra::distancesFrom($graph, 0)),
+    // label propagation: a shuffled sweep with immediate updates, whose
+    // termination depends on values the JIT is free to keep in registers
+    'label_propagation' => new LabelPropagation(7)->partition($graph)->membership(),
+    'label_propagation_weighted' => new LabelPropagation(3)->partition($graph)->count(),
     // structure: two iterative depth-first walks with an explicit stack,
     // which is a shape the JIT rewrites heavily
     'strong_components' => Connectivity::stronglyConnectedComponents($directed)->membership(),

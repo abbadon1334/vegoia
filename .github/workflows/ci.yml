@@ -176,6 +176,7 @@ jobs:
           python3 tools/generate_inference_fixtures.py
           python3 tools/generate_link_prediction_fixtures.py
           python3 tools/generate_structure_fixtures.py
+          python3 tools/generate_label_propagation_fixtures.py
 
       - name: The references must still give the same answers
         run: python3 tools/compare_fixtures.py "${RUNNER_TEMP}/fixtures-committed" resources/fixtures

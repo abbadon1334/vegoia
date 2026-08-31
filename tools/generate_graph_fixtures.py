@@ -146,6 +146,22 @@ def centralities(G: nx.Graph, n: int) -> dict:
         out["betweenness_weighted"] = vec(
             nx.betweenness_centrality(G, normalized=False, weight="weight")
         )
+    # Personalised PageRank: the teleport target is a chosen set rather than
+    # the whole graph, which is how a ranking is biased towards a query's seed
+    # nodes. Three seeds spread across the graph so the effect is visible.
+    seeds = sorted(key)[:3]
+    personal = {v: (1.0 if key[v] in (0, n // 2, n - 1) else 0.0) for v in G}
+    if sum(personal.values()) == 0:
+        personal = {v: 1.0 for v in G}
+    out["pagerank_personalised"] = vec(
+        nx.pagerank(G, alpha=0.85, tol=1.0e-12, max_iter=1000, personalization=personal))
+    out["personalisation_nodes"] = [float(x) for x in sorted({0, n // 2, n - 1})]
+
+    # Betweenness with weights read as distances, not capacities: a heavier
+    # edge is a longer detour, so shortest paths avoid it.
+    out["betweenness_weighted"] = vec(
+        nx.betweenness_centrality(G, normalized=False, weight="weight" if weighted else None))
+
     out["katz_alpha"] = [katz_alpha(G, weighted)] * n
     return out
 

@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
+use Vegoia\Exception\InvalidArgument;
 use Vegoia\Graph\Centrality\Betweenness;
 use Vegoia\Graph\Centrality\Closeness;
 use Vegoia\Graph\Centrality\PageRank;
@@ -141,12 +142,118 @@ final class CentralityTest extends TestCase
         );
     }
 
+    #[DataProvider('fixtures')]
+    public function test_personalised_pagerank_agrees_with_networkx(string $name): void
+    {
+        $fixture = GraphFixture::load($name);
+
+        $seeds = [];
+        foreach ($fixture->expectedVector('personalisation_nodes') as $node) {
+            $seeds[(int) $node] = 1.0;
+        }
+
+        $scores = (new PageRank(tolerance: 1.0e-14))->of($fixture->graph(), $seeds);
+
+        foreach ($fixture->expectedVector('pagerank_personalised') as $node => $value) {
+            Lre::assertDigits($scores[$node], $value, "{$name}: personalised rank of {$node}", digits: 8);
+        }
+    }
+
+    #[DataProvider('fixtures')]
+    public function test_weighted_betweenness_agrees_with_networkx(string $name): void
+    {
+        $fixture = GraphFixture::load($name);
+        $scores = Betweenness::weighted($fixture->graph());
+
+        foreach ($fixture->expectedVector('betweenness_weighted') as $node => $value) {
+            Lre::assertDigits($scores[$node], $value, "{$name}: weighted betweenness of {$node}", digits: 10);
+        }
+    }
+
+    /**
+     * Aiming the teleportation is the point: the seeds must gain and the rest
+     * must lose, or the personalisation is being ignored.
+     */
+    public function test_personalisation_concentrates_rank_on_its_seeds(): void
+    {
+        $graph = GraphFixture::load('zachary')->graph();
+        $rank = new PageRank();
+
+        $plain = $rank->of($graph);
+        $biased = $rank->of($graph, [0 => 1.0]);
+
+        self::assertGreaterThan($plain[0], $biased[0], 'the seed must gain');
+        self::assertEqualsWithDelta(1.0, array_sum($biased), 1.0e-12, 'still a distribution');
+
+        // The mass has to come from somewhere.
+        $lost = 0;
+        for ($node = 1; $node < $graph->order(); $node++) {
+            if ($biased[$node] < $plain[$node]) {
+                $lost++;
+            }
+        }
+
+        self::assertGreaterThan($graph->order() / 2, $lost, 'most other nodes must lose rank');
+    }
+
+    /** A uniform personalisation is the ordinary walk, by definition. */
+    public function test_uniform_personalisation_reproduces_plain_pagerank(): void
+    {
+        $graph = GraphFixture::load('zachary')->graph();
+        $uniform = array_fill(0, $graph->order(), 1.0);
+
+        $plain = (new PageRank(tolerance: 1.0e-14))->of($graph);
+        $spread = (new PageRank(tolerance: 1.0e-14))->of($graph, $uniform);
+
+        foreach ($plain as $node => $value) {
+            self::assertEqualsWithDelta($value, $spread[$node], 1.0e-12, "node {$node}");
+        }
+    }
+
+    public function test_personalisation_is_validated(): void
+    {
+        $graph = GraphFixture::load('zachary')->graph();
+
+        $this->expectException(InvalidArgument::class);
+
+        (new PageRank())->of($graph, [999 => 1.0]);
+    }
+
+    public function test_a_personalisation_with_no_weight_is_refused(): void
+    {
+        $graph = GraphFixture::load('zachary')->graph();
+
+        $this->expectException(InvalidArgument::class);
+
+        (new PageRank())->of($graph, [0 => 0.0, 1 => 0.0]);
+    }
+
+    /**
+     * Weights are distances here, not capacities: the direct heavy edge is a
+     * longer route than two light ones, so the middle node carries the traffic.
+     */
+    public function test_weighted_betweenness_treats_weight_as_distance(): void
+    {
+        $graph = Graph::undirected(3, [[0, 1, 1.0], [1, 2, 1.0], [0, 2, 10.0]]);
+
+        self::assertSame(0.0, Betweenness::of($graph)[1], 'by hops, 0-2 is direct');
+        self::assertSame(1.0, Betweenness::weighted($graph)[1], 'by weight, everything goes through 1');
+    }
+
+    public function test_weighted_betweenness_refuses_negative_weights(): void
+    {
+        $this->expectException(InvalidArgument::class);
+
+        Betweenness::weighted(Graph::undirected(3, [[0, 1, 1.0], [1, 2, -1.0]]));
+    }
+
     public function test_centrality_of_an_empty_graph_is_an_empty_vector(): void
     {
         $empty = Graph::undirected(0);
 
         self::assertSame([], (new PageRank())->of($empty));
         self::assertSame([], Betweenness::of($empty));
+        self::assertSame([], Betweenness::weighted($empty));
         self::assertSame([], Closeness::of($empty));
     }
 }

@@ -25,6 +25,13 @@ use Vegoia\Graph\Graph;
  *   * a node with no outgoing weight is "dangling", and its mass is spread
  *     uniformly rather than lost -- otherwise the scores stop summing to 1;
  *   * an undirected edge is walked in both directions.
+ *
+ * Teleportation can be aimed. By default the walk restarts anywhere with equal
+ * probability, which measures importance in the graph as a whole; give it a
+ * personalisation vector and it restarts only among the nodes you name, which
+ * measures importance *relative to them*. That is the standard way to bias a
+ * ranking towards a query -- seed the vector with the nodes a search matched
+ * and the scores answer "what else matters, given these".
  */
 final readonly class PageRank
 {
@@ -42,14 +49,20 @@ final readonly class PageRank
         }
     }
 
-    /** @return list<float> scores by node, summing to 1 */
-    public function of(Graph $graph): array
+    /**
+     * @param  array<int, float>|null $personalisation node => weight; the walk
+     *         teleports only to these, in proportion. Null spreads it evenly.
+     * @return list<float> scores by node, summing to 1
+     */
+    public function of(Graph $graph, ?array $personalisation = null): array
     {
         $order = $graph->order();
 
         if ($order === 0) {
             return [];
         }
+
+        $teleportTo = self::teleportDistribution($order, $personalisation);
 
         [$offsets, $targets, $weights] = $graph->csr();
 
@@ -91,9 +104,10 @@ final readonly class PageRank
             }
         }
 
-        $uniform = 1.0 / $order;
-        $score = array_fill(0, $order, $uniform);
-        $teleport = (1.0 - $this->damping) * $uniform;
+        // Start from the teleport distribution rather than uniform: with a
+        // personalisation vector that is where the walk lives, so starting
+        // there converges sooner without changing the limit.
+        $score = $teleportTo;
 
         for ($iteration = 0; $iteration < $this->maxIterations; $iteration++) {
             $dangling = 0.0;
@@ -102,8 +116,16 @@ final readonly class PageRank
                 $dangling += $score[$node];
             }
 
-            $base = $teleport + $this->damping * $dangling * $uniform;
-            $next = array_fill(0, $order, $base);
+            // Teleporting mass plus mass stranded on dangling nodes. Both land
+            // on the teleport distribution, not spread evenly -- otherwise a
+            // personalised walk would leak into the rest of the graph and the
+            // bias would wash out.
+            $redistributed = (1.0 - $this->damping) + $this->damping * $dangling;
+            $next = [];
+
+            for ($node = 0; $node < $order; $node++) {
+                $next[] = $redistributed * $teleportTo[$node];
+            }
 
             for ($node = 0; $node < $order; $node++) {
                 $out = $outgoing[$node];
@@ -140,7 +162,52 @@ final readonly class PageRank
             }
         }
 
-        /** @var list<float> $score array_fill over 0..order-1, only overwritten */
+        /** @var list<float> $score */
         return $score;
+    }
+
+    /**
+     * Normalise a personalisation into a distribution over every node.
+     *
+     * @param  array<int, float>|null $personalisation
+     * @return list<float>
+     */
+    private static function teleportDistribution(int $order, ?array $personalisation): array
+    {
+        if ($personalisation === null) {
+            return array_fill(0, $order, 1.0 / $order);
+        }
+
+        $weights = array_fill(0, $order, 0.0);
+        $total = 0.0;
+
+        foreach ($personalisation as $node => $weight) {
+            if ($node < 0 || $node >= $order) {
+                throw InvalidArgument::nodeOutOfRange($node, $order);
+            }
+
+            if ($weight < 0.0) {
+                throw InvalidArgument::outOfRange(
+                    "Personalisation weight for node {$node}",
+                    $weight,
+                    0.0,
+                    INF,
+                );
+            }
+
+            $weights[$node] += $weight;
+            $total += $weight;
+        }
+
+        if ($total <= 0.0) {
+            throw InvalidArgument::emptyDataset('a personalisation vector with no positive weight');
+        }
+
+        for ($node = 0; $node < $order; $node++) {
+            $weights[$node] /= $total;
+        }
+
+        /** @var list<float> $weights */
+        return $weights;
     }
 }

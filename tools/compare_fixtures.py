@@ -83,17 +83,38 @@ def is_digits_file(path: pathlib.Path) -> bool:
 
 
 def is_sampled(where: str) -> bool:
-    """Whether this value came out of leidenalg's stochastic search.
+    """Whether this value is another library's answer rather than a reference.
 
-    `.leiden.` covers the per-objective bands; leiden_seed42 is the single
-    partition pinned so the quality functions have a non-trivial input, and
-    any partition serves that purpose. `seeds` is excluded: it is the number
-    of runs the generator asked for, a constant, and it must not drift.
+    Two kinds, both reported instead of enforced.
+
+    Leidenalg's stochastic search: `.leiden.` covers the per-objective bands,
+    and leiden_seed42 is the single partition pinned so the quality functions
+    have a non-trivial input, which any partition would serve. `seeds` is
+    excluded -- it is the number of runs the generator asked for, a constant,
+    and it must not drift.
+
+    statsmodels' fitted values and intervals. Its OLS goes through a
+    pseudo-inverse, so every number it produces follows how the machine's
+    LAPACK handles the smallest singular values, and these are the NIST
+    datasets, chosen to be ill-conditioned. Between two CI runners on
+    identical software, 219 of them moved -- Pontius's intervals by 7e-11,
+    and the accuracy statsmodels reaches on a Norris prediction from 12.71
+    digits to 12.36.
+
+    Nothing is lost by exempting them, because they are not the reference for
+    anything: the inference fixture's certified values come from NIST and stay
+    enforced, and the job's real question -- whether the library still
+    satisfies what was just regenerated -- is asked by running the suite
+    against it.
     """
     if where.endswith(".seeds"):
         return False
 
-    return ".leiden." in where or ".quality_probes.leiden_seed42." in where
+    return (
+        ".leiden." in where
+        or ".quality_probes.leiden_seed42." in where
+        or ".statsmodels." in where
+    )
 
 
 def compare(baseline, current, where: str, digits: bool, problems: list[str], sampled: list[str] | None = None) -> None:
@@ -156,9 +177,19 @@ def compare(baseline, current, where: str, digits: bool, problems: list[str], sa
 
     difference = abs(baseline - current)
 
-    if difference <= ABSOLUTE:
-        return
-    if difference <= RELATIVE * max(abs(baseline), abs(current)):
+    # The absolute floor applies only when one side is exactly zero, which is
+    # the case it was written for: a correlation that comes out 0.0 here and
+    # -8.4e-18 there, the same answer reached by a different summation order.
+    #
+    # Applying it whenever the difference is small was wrong, and a deliberate
+    # mutation caught it. Norris's smallest p-value is 4.65e-90; multiplying it
+    # by 1.001 moves it by 4.7e-93, which cleared a 1e-12 floor without
+    # difficulty. A tail probability is meaningful at any magnitude and has to
+    # be compared relatively all the way down.
+    if baseline == 0.0 or current == 0.0:
+        if difference <= ABSOLUTE:
+            return
+    elif difference <= RELATIVE * max(abs(baseline), abs(current)):
         return
 
     problems.append(f"{where}: {baseline!r} -> {current!r} (differs by {difference:.3e})")

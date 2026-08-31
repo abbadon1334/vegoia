@@ -128,14 +128,29 @@ jobs:
         with:
           python-version: '3.12'
 
-      # The committed fixtures, and the accuracy ceilings measured from numpy,
-      # are the reference every numeric test is checked against. If regenerating them from networkx, igraph and leidenalg does
-      # not reproduce them byte for byte, they are not a reference -- they are
-      # a snapshot of one machine. This has already been wrong once: Python
-      # randomises string hashing per process, which reordered the sums behind
-      # harmonic centrality and moved its last bit.
+      # The committed fixtures, and the accuracy ceilings measured from
+      # numpy, are the reference every numeric test is checked against. If
+      # regenerating them from networkx, igraph and leidenalg does not
+      # reproduce them, they are not a reference -- they are a snapshot of one
+      # machine.
+      #
+      # "Reproduce" cannot mean byte for byte, though that is what this job
+      # asked for first, and it failed: every difference was one or two units
+      # in the last place, the signature of the same sum taken in a different
+      # order on a different CPU. See tools/compare_fixtures.py for the full
+      # reasoning and the tolerances. Structure is still compared exactly.
+      #
+      # Deliberately unpinned. Pinning would make this job quieter and stop it
+      # doing its job: it exists to notice when a reference library changes
+      # its answer, and a pin hides exactly that.
       - name: Install the reference stack
-        run: pip install --quiet numpy scipy scikit-learn networkx python-igraph leidenalg
+        run: pip install numpy scipy scikit-learn networkx python-igraph leidenalg
+
+      - name: Record which versions produced this run
+        run: pip list --format=freeze | grep -E '^(numpy|scipy|scikit-learn|networkx|igraph|leidenalg)='
+
+      - name: Keep the committed fixtures to compare against
+        run: cp -r resources/fixtures "${RUNNER_TEMP}/fixtures-committed"
 
       - name: Regenerate
         run: |
@@ -148,12 +163,5 @@ jobs:
           python3 tools/generate_lls_attainable.py
           python3 tools/generate_anova_attainable.py
 
-      - name: Nothing may have changed
-        run: |
-          if ! git diff --quiet; then
-            echo "::error::Regenerating the fixtures changed them. They are not reproducible."
-            git diff --stat
-            git diff | head -60
-            exit 1
-          fi
-          echo "Fixtures reproduce byte for byte."
+      - name: The references must still give the same answers
+        run: python3 tools/compare_fixtures.py "${RUNNER_TEMP}/fixtures-committed" resources/fixtures

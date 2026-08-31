@@ -78,6 +78,31 @@ final class GraphTest extends TestCase
         self::assertSame(10.0, $graph->totalEndpointWeight());
     }
 
+    /**
+     * Describes the graph, not the input. Two parallel edges of weight 1 merge
+     * into one of weight 2, so a construction with no explicit weights can
+     * still be a weighted graph -- and reporting the input gave two identical
+     * graphs different answers.
+     */
+    public function test_weightedness_describes_the_stored_graph(): void
+    {
+        self::assertFalse(Graph::undirected(2, [[0, 1, 1.0]])->isWeighted());
+        self::assertTrue(Graph::undirected(2, [[0, 1, 2.0]])->isWeighted());
+
+        $merged = Graph::undirected(2, [[0, 1, 1.0], [0, 1, 1.0]]);
+
+        self::assertSame(2.0, $merged->edgeWeight(0, 1));
+        self::assertTrue($merged->isWeighted(), 'merging made it weighted');
+
+        self::assertFalse(Graph::undirected(3)->isWeighted(), 'no edges, no weights');
+    }
+
+    public function test_it_enumerates_its_nodes(): void
+    {
+        self::assertSame([0, 1, 2], iterator_to_array(Graph::undirected(3)->nodes()));
+        self::assertSame([], iterator_to_array(Graph::undirected(0)->nodes()));
+    }
+
     public function test_it_rejects_a_node_outside_the_declared_order(): void
     {
         $this->expectException(InvalidArgument::class);

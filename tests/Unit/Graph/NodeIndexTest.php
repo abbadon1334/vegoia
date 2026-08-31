@@ -31,6 +31,18 @@ final class NodeIndexTest extends TestCase
         self::assertSame(1, $index->count());
     }
 
+    public function test_it_reports_whether_it_knows_an_identifier(): void
+    {
+        $index = NodeIndex::of(['alpha', 'beta']);
+
+        self::assertTrue($index->has('alpha'));
+        self::assertFalse($index->has('gamma'));
+
+        $index->add('gamma');
+
+        self::assertTrue($index->has('gamma'));
+    }
+
     public function test_it_builds_a_graph_from_identifier_pairs(): void
     {
         [$graph, $index] = NodeIndex::graphFrom([

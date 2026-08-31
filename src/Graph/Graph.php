@@ -95,6 +95,15 @@ final class Graph
         return $this->directed;
     }
 
+    /**
+     * Whether any stored edge carries a weight other than 1.
+     *
+     * Describes the graph, not the input it came from. Those differ: two
+     * parallel edges of weight 1 merge into a single edge of weight 2, so a
+     * construction with no explicit weights can still produce a weighted
+     * graph. Reporting the input instead gave two identical graphs different
+     * answers.
+     */
     public function isWeighted(): bool
     {
         return $this->weighted;
@@ -229,7 +238,6 @@ final class Graph
         $merged = [];
         $selfLoops = [];
         $totalWeight = 0.0;
-        $weighted = false;
 
         foreach ($edges as $edge) {
             if (! is_array($edge) || ! array_key_exists(0, $edge) || ! array_key_exists(1, $edge)) {
@@ -252,10 +260,6 @@ final class Graph
                 throw InvalidArgument::malformedEdge("edge {$from}-{$to} has a non-finite weight");
             }
 
-            if ($weight !== 1.0) {
-                $weighted = true;
-            }
-
             // Undirected edges are keyed by the ordered pair so that a-b and
             // b-a merge rather than becoming two edges.
             [$low, $high] = ! $directed && $from > $to ? [$to, $from] : [$from, $to];
@@ -272,6 +276,17 @@ final class Graph
 
             if ($low === $high) {
                 $selfLoops[$low] = ($selfLoops[$low] ?? 0.0) + $weight;
+            }
+        }
+
+        // Decided from the merged weights, after parallel edges have combined.
+        $weighted = false;
+
+        foreach ($merged as $weight) {
+            if ($weight !== 1.0) {
+                $weighted = true;
+
+                break;
             }
         }
 

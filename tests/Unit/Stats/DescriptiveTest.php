@@ -160,6 +160,13 @@ final class DescriptiveTest extends TestCase
         self::assertSame(0.0, $stats->stdDev());
     }
 
+    public function test_it_hands_back_the_values_it_was_given(): void
+    {
+        // Normalised to a list of floats, whatever went in.
+        self::assertSame([1.0, 3.0], Descriptive::of(['a' => 1, 'b' => 3])->values());
+        self::assertSame([], Descriptive::of([])->values());
+    }
+
     public function test_it_accepts_any_iterable_and_non_list_arrays(): void
     {
         self::assertSame(2.0, Descriptive::of(['a' => 1.0, 'b' => 3.0])->mean());

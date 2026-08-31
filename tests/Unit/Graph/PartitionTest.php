@@ -43,6 +43,18 @@ final class PartitionTest extends TestCase
         self::assertSame(1, $partition->communityOf(2));
     }
 
+    public function test_it_lists_the_nodes_of_a_community(): void
+    {
+        $partition = Partition::fromMembership([0, 1, 0, 1, 2]);
+
+        self::assertSame([0, 2], $partition->nodesIn(0));
+        self::assertSame([4], $partition->nodesIn(2));
+
+        $this->expectException(InvalidArgument::class);
+
+        $partition->nodesIn(9);
+    }
+
     public function test_two_partitions_are_equal_when_they_group_the_same_nodes(): void
     {
         self::assertTrue(

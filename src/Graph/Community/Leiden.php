@@ -147,11 +147,6 @@ final class Leiden
         return self::modularity($resolution, $seed);
     }
 
-    public function objective(): QualityFunction
-    {
-        return $this->objective;
-    }
-
     /**
      * 1 for Modularity, 2 for ConstantPotts, 0 for anything else.
      *

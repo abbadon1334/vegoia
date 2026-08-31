@@ -214,9 +214,14 @@ jobs:
       # guard covered its lines, passed, and missed a defect that made Surprise
       # count 105 edges on a 78-edge graph.
       #
-      # The threshold is measured, not aspired to. It is set at the score the
-      # suite actually reaches, so a change that weakens the tests fails here
-      # even while every test still passes.
+      # The threshold is measured, not aspired to: 82.3% is what the suite
+      # reaches, and 82 is that rounded down so ordinary variation between runs
+      # does not fail the build while a real weakening does. Every line of the
+      # library is reachable by some test -- mutation code coverage is 100% --
+      # so the number is entirely about whether the assertions notice, not
+      # about what is exercised.
+      #
+      # Raise it when the score rises. Lowering it is a decision, not a fix.
       - name: Infection
         run: |
           vendor/bin/infection \
@@ -225,8 +230,8 @@ jobs:
             --no-progress \
             --only-covering-test-cases \
             --show-mutations=0 \
-            --min-msi=0 \
-            --min-covered-msi=0
+            --min-msi=82 \
+            --min-covered-msi=82
 
       - name: Summary
         if: always()

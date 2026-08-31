@@ -51,12 +51,12 @@ final class Correlation
      * digit cancels. The `large_values` fixture, four numbers just above 1e8,
      * returns garbage from it.
      *
-     * @param list<float> $x
-     * @param list<float> $y
+     * @param array<array-key, float> $x
+     * @param array<array-key, float> $y
      */
     public static function pearson(array $x, array $y): float
     {
-        $n = self::assertPaired($x, $y);
+        [$x, $y, $n] = self::assertPaired($x, $y);
 
         $meanX = Descriptive::of($x)->mean();
         $meanY = Descriptive::of($y)->mean();
@@ -89,12 +89,12 @@ final class Correlation
     /**
      * Spearman's rho: Pearson applied to midranks.
      *
-     * @param list<float> $x
-     * @param list<float> $y
+     * @param array<array-key, float> $x
+     * @param array<array-key, float> $y
      */
     public static function spearman(array $x, array $y): float
     {
-        self::assertPaired($x, $y);
+        [$x, $y] = self::assertPaired($x, $y);
 
         return self::pearson(self::midranks($x), self::midranks($y));
     }
@@ -109,12 +109,12 @@ final class Correlation
      * a perfectly ordered sample containing ties cannot reach 1, which makes
      * the coefficient hard to interpret exactly where ties are common.
      *
-     * @param list<float> $x
-     * @param list<float> $y
+     * @param array<array-key, float> $x
+     * @param array<array-key, float> $y
      */
     public static function kendall(array $x, array $y): float
     {
-        $n = self::assertPaired($x, $y);
+        [$x, $y, $n] = self::assertPaired($x, $y);
 
         $concordant = 0;
         $discordant = 0;
@@ -261,10 +261,27 @@ final class Correlation
     }
 
     /**
-     * @param list<float> $x
-     * @param list<float> $y
+     * @param array<array-key, float> $x
+     * @param array<array-key, float> $y
      */
-    private static function assertPaired(array $x, array $y): int
+    /**
+     * Check the pairing, and hand back both samples indexed by position.
+     *
+     * The re-indexing is not tidiness. These routines walk the two samples
+     * together by position while the means underneath come from Descriptive,
+     * which accepts any iterable and normalises it. Passing an array keyed by
+     * anything other than 0..n-1 therefore used to give a mean taken over all
+     * the values and a covariance taken over whichever of them happened to
+     * land on an integer key -- a wrong answer with a scattering of undefined
+     * index warnings, rather than a refusal. The two halves of the library now
+     * agree on what a sample is.
+     *
+     * @param array<array-key, float> $x
+     * @param array<array-key, float> $y
+     *
+     * @return array{list<float>, list<float>, int}
+     */
+    private static function assertPaired(array $x, array $y): array
     {
         $n = count($x);
 
@@ -278,6 +295,6 @@ final class Correlation
             throw InvalidArgument::tooFewValues('Correlation', $n, 2);
         }
 
-        return $n;
+        return [array_values($x), array_values($y), $n];
     }
 }

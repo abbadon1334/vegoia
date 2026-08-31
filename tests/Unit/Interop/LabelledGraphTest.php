@@ -29,23 +29,31 @@ final class LabelledGraphTest extends TestCase
     /**
      * The same triangle plus an isolated node, written four ways.
      *
-     * @return iterable<string, array{LabelledGraph}>
+     * The provider hands back a closure rather than a built graph, and that is
+     * not a style choice: code run inside a data provider is not attributed to
+     * the test that consumes it, so building here left the constructors
+     * looking untested. Mutation testing said so -- flipping the `$directed`
+     * default to true survived every assertion below.
+     *
+     * @return iterable<string, array{callable(): LabelledGraph}>
      */
     public static function theSameGraph(): iterable
     {
         yield 'edge list' => [
-            LabelledGraph::fromEdges(
+            static fn (): LabelledGraph => LabelledGraph::fromEdges(
                 [['a', 'b'], ['b', 'c'], ['a', 'c']],
                 ['a', 'b', 'c', 'd'],
             ),
         ];
 
         yield 'adjacency list' => [
-            LabelledGraph::fromAdjacency(['a' => ['b', 'c'], 'b' => ['c'], 'c' => [], 'd' => []]),
+            static fn (): LabelledGraph => LabelledGraph::fromAdjacency(
+                ['a' => ['b', 'c'], 'b' => ['c'], 'c' => [], 'd' => []],
+            ),
         ];
 
         yield 'adjacency map with weights' => [
-            LabelledGraph::fromAdjacency([
+            static fn (): LabelledGraph => LabelledGraph::fromAdjacency([
                 'a' => ['b' => 1.0, 'c' => 1.0],
                 'b' => ['c' => 1.0],
                 'c' => [],
@@ -54,16 +62,19 @@ final class LabelledGraphTest extends TestCase
         ];
 
         yield 'matrix' => [
-            LabelledGraph::fromMatrix(
+            static fn (): LabelledGraph => LabelledGraph::fromMatrix(
                 [[0, 1, 1, 0], [1, 0, 1, 0], [1, 1, 0, 0], [0, 0, 0, 0]],
                 ['a', 'b', 'c', 'd'],
             ),
         ];
     }
 
+    /** @param callable(): LabelledGraph $build */
     #[DataProvider('theSameGraph')]
-    public function test_every_input_shape_describes_the_same_graph(LabelledGraph $labelled): void
+    public function test_every_input_shape_describes_the_same_graph(callable $build): void
     {
+        $labelled = $build();
+
         self::assertSame(4, $labelled->graph->order());
         self::assertSame(3, $labelled->graph->size());
         self::assertSame(3.0, $labelled->graph->totalWeight());
@@ -81,9 +92,11 @@ final class LabelledGraphTest extends TestCase
      * An entity nobody linked is not a degenerate case; it is exactly what a
      * knowledge graph should be able to report on.
      */
+    /** @param callable(): LabelledGraph $build */
     #[DataProvider('theSameGraph')]
-    public function test_an_isolated_node_survives_the_round_trip(LabelledGraph $labelled): void
+    public function test_an_isolated_node_survives_the_round_trip(callable $build): void
     {
+        $labelled = $build();
         $communities = $labelled->communities(Leiden::modularity(seed: 1)->partition($labelled->graph));
 
         self::assertContains(['d'], $communities, 'the isolated node lost its own community');
@@ -137,6 +150,34 @@ final class LabelledGraphTest extends TestCase
 
         self::assertSame(1, $labelled->graph->size());
         self::assertSame(2.5, $labelled->graph->totalWeight());
+    }
+
+    /**
+     * Without labels the rows are named by their position, so identifiers
+     * still round-trip and the result behaves like every other one here.
+     */
+    public function test_an_unlabelled_matrix_names_its_rows_by_position(): void
+    {
+        $labelled = LabelledGraph::fromMatrix([[0, 1, 0], [1, 0, 1], [0, 1, 0]]);
+
+        self::assertSame(['0', '1', '2'], $labelled->index->identifiers());
+        self::assertSame(1, $labelled->node('1'));
+    }
+
+    /**
+     * The diagonal is kept, so a self-loop written in a matrix survives.
+     *
+     * It is the reason the undirected case takes the upper triangle including
+     * the diagonal rather than strictly above it -- skipping the diagonal
+     * would silently drop every self-loop, and a self-loop is a real thing to
+     * say about an entity.
+     */
+    public function test_a_self_loop_on_the_diagonal_survives(): void
+    {
+        $labelled = LabelledGraph::fromMatrix([[3.0, 1.0], [1.0, 0.0]]);
+
+        self::assertSame(3.0, $labelled->graph->selfLoopWeight(0));
+        self::assertSame(4.0, $labelled->graph->totalWeight());
     }
 
     /** A directed matrix is not symmetric and both halves are edges. */
@@ -212,6 +253,11 @@ final class LabelledGraphTest extends TestCase
         yield 'the wrong number of labels' => [
             static fn () => LabelledGraph::fromMatrix([[0, 1], [1, 0]], ['only one']),
             '2 rows and 1 labels',
+        ];
+        yield 'a neighbour that is neither a name nor a number' => [
+            /** @phpstan-ignore argument.type */
+            static fn () => LabelledGraph::fromAdjacency(['a' => [['nested']]]),
+            'neither a name nor a number',
         ];
         yield 'an index that does not fit the graph' => [
             static fn () => new LabelledGraph(Graph::undirected(3), NodeIndex::of(['a'])),

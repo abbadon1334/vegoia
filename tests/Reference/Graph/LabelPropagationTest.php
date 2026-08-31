@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
+use Vegoia\Exception\InvalidArgument;
 use Vegoia\Graph\Community\Agreement;
 use Vegoia\Graph\Community\LabelPropagation;
 use Vegoia\Graph\Community\Leiden;
@@ -260,5 +261,26 @@ final class LabelPropagationTest extends TestCase
     public function test_an_empty_graph_gives_an_empty_partition(): void
     {
         self::assertSame(0, new LabelPropagation()->partition(Graph::undirected(0))->count());
+    }
+
+    /**
+     * One iteration is a legal request, and it is the boundary: the guard has
+     * to refuse zero and accept one, and only checking the refusal would let
+     * it sit a place too far in.
+     */
+    public function test_a_single_iteration_is_allowed(): void
+    {
+        $graph = GraphFixture::load('disjoint_cliques')->graph();
+        $partition = new LabelPropagation(1, maxIterations: 1)->partition($graph);
+
+        self::assertSame($graph->order(), count($partition->membership()));
+    }
+
+    public function test_zero_iterations_is_refused(): void
+    {
+        $this->expectException(InvalidArgument::class);
+        $this->expectExceptionMessageMatches('/Maximum iterations must lie/');
+
+        new LabelPropagation(1, maxIterations: 0);
     }
 }

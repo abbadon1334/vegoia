@@ -22,6 +22,22 @@ which is what the fixtures actually claim. Anything non-numeric -- a
 community membership, a triangle count, a key, an array length -- must match
 exactly, because those are the things that move when a reference library
 genuinely changes its mind.
+
+One class of value is exempt and reported instead. Some fixtures record what
+leidenalg's *search* found: the min/max/mean/stdev of modularity over fifty
+seeded runs, and one partition taken at seed 42. Those are samples drawn from
+another library's random number stream, and that stream is not part of its
+API. Between leidenalg 0.10.2 and 0.12.0 every one of the 142 differences
+seen here came from exactly those fields -- while the deterministic ones, all
+1,100 of them, reproduced bit for bit, including the arithmetic of all five
+quality functions at every resolution on fixed partitions. Requiring a
+stochastic sample to reproduce would mean pinning leidenalg's RNG forever,
+which tests nothing about this library.
+
+The exemption is not a loophole, because the claim that matters is asserted
+elsewhere and more strictly: the PHP suite requires this implementation to
+reach the best modularity leidenalg reaches, on every fixture, and that bar
+was verified to hold under both reference versions.
 """
 
 from __future__ import annotations
@@ -56,7 +72,21 @@ def is_digits_file(path: pathlib.Path) -> bool:
     return path.name.startswith("attainable_")
 
 
-def compare(baseline, current, where: str, digits: bool, problems: list[str]) -> None:
+def is_sampled(where: str) -> bool:
+    """Whether this value came out of leidenalg's stochastic search.
+
+    `.leiden.` covers the per-objective bands; leiden_seed42 is the single
+    partition pinned so the quality functions have a non-trivial input, and
+    any partition serves that purpose. `seeds` is excluded: it is the number
+    of runs the generator asked for, a constant, and it must not drift.
+    """
+    if where.endswith(".seeds"):
+        return False
+
+    return ".leiden." in where or ".quality_probes.leiden_seed42." in where
+
+
+def compare(baseline, current, where: str, digits: bool, problems: list[str], sampled: list[str] | None = None) -> None:
     if type(baseline) is not type(current) and not (
         isinstance(baseline, (int, float))
         and isinstance(current, (int, float))
@@ -64,6 +94,11 @@ def compare(baseline, current, where: str, digits: bool, problems: list[str]) ->
         and not isinstance(current, bool)
     ):
         problems.append(f"{where}: type changed, {type(baseline).__name__} -> {type(current).__name__}")
+        return
+
+    if sampled is not None and not isinstance(baseline, (dict, list)) and is_sampled(where):
+        if baseline != current:
+            sampled.append(f"{where}: {baseline!r} -> {current!r}")
         return
 
     if isinstance(baseline, dict):
@@ -77,7 +112,7 @@ def compare(baseline, current, where: str, digits: bool, problems: list[str]) ->
 
         for key in baseline:
             if key in current:
-                compare(baseline[key], current[key], f"{where}.{key}", digits, problems)
+                compare(baseline[key], current[key], f"{where}.{key}", digits, problems, sampled)
         return
 
     if isinstance(baseline, list):
@@ -86,7 +121,7 @@ def compare(baseline, current, where: str, digits: bool, problems: list[str]) ->
             return
 
         for i, (b, c) in enumerate(zip(baseline, current)):
-            compare(b, c, f"{where}[{i}]", digits, problems)
+            compare(b, c, f"{where}[{i}]", digits, problems, sampled)
         return
 
     # Integers carry counts, community labels and node ids. They are exact
@@ -131,6 +166,7 @@ def main() -> int:
     current_files = {p.relative_to(current_root) for p in current_root.rglob("*.json")}
 
     problems: list[str] = []
+    sampled: list[str] = []
 
     for missing in sorted(baseline_files - current_files):
         problems.append(f"{missing}: was not regenerated")
@@ -146,8 +182,19 @@ def main() -> int:
         with (current_root / name).open() as handle:
             current = json.load(handle)
 
-        compare(baseline, current, str(name), is_digits_file(name), problems)
+        compare(baseline, current, str(name), is_digits_file(name), problems, sampled)
         checked += 1
+
+    if sampled:
+        print(
+            f"{len(sampled)} sampled value(s) drifted -- leidenalg explored in a different "
+            "random order. Not a failure; see the module docstring. For example:"
+        )
+
+        for drift in sampled[:5]:
+            print(f"  {drift}")
+
+        print()
 
     if problems:
         print(f"Regenerating the fixtures changed them, in {len(problems)} place(s):\n", file=sys.stderr)
@@ -160,7 +207,7 @@ def main() -> int:
 
         return 1
 
-    print(f"{checked} fixture files reproduce: structure identical, numbers within tolerance.")
+    print(f"{checked} fixture files reproduce: structure identical, deterministic numbers within tolerance.")
     return 0
 
 

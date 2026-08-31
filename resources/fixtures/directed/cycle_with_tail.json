@@ -1,0 +1,77 @@
+{
+ "directed": true,
+ "edges": [
+  [
+   0,
+   1,
+   1.0
+  ],
+  [
+   1,
+   2,
+   1.0
+  ],
+  [
+   2,
+   0,
+   1.0
+  ],
+  [
+   2,
+   3,
+   1.0
+  ],
+  [
+   3,
+   4,
+   1.0
+  ]
+ ],
+ "expected": {
+  "betweenness": [
+   1.0,
+   3.0,
+   5.0,
+   3.0,
+   0.0
+  ],
+  "hits_authorities": [
+   0.5,
+   0.0,
+   0.0,
+   0.5,
+   0.0
+  ],
+  "hits_hubs": [
+   0.0,
+   0.0,
+   1.0,
+   0.0,
+   0.0
+  ],
+  "in_degree": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "out_degree": [
+   1.0,
+   1.0,
+   2.0,
+   1.0,
+   0.0
+  ],
+  "pagerank": [
+   0.1690324106931312,
+   0.20925005914399986,
+   0.24343506032573772,
+   0.1690324106931312,
+   0.20925005914399986
+  ]
+ },
+ "name": "cycle_with_tail",
+ "nodes": 5,
+ "note": "A cycle with a path leading out of it: one component of three and two of one, which is the shape that catches an implementation collapsing weak and strong."
+}

@@ -23,5 +23,20 @@
   "name": "two_components",
   "nodes": 4,
   "edges": 3
+ },
+ {
+  "name": "three_cycle",
+  "nodes": 3,
+  "edges": 3
+ },
+ {
+  "name": "two_strong_components",
+  "nodes": 6,
+  "edges": 7
+ },
+ {
+  "name": "cycle_with_tail",
+  "nodes": 5,
+  "edges": 5
  }
 ]

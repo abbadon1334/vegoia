@@ -1,0 +1,47 @@
+{
+ "directed": true,
+ "edges": [
+  [
+   0,
+   1,
+   1.0
+  ],
+  [
+   1,
+   2,
+   1.0
+  ],
+  [
+   2,
+   0,
+   1.0
+  ]
+ ],
+ "expected": {
+  "betweenness": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "hits_authorities": null,
+  "hits_hubs": null,
+  "in_degree": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "out_degree": [
+   1.0,
+   1.0,
+   1.0
+  ],
+  "pagerank": [
+   0.3333333333333333,
+   0.3333333333333333,
+   0.3333333333333333
+  ]
+ },
+ "name": "three_cycle",
+ "nodes": 3,
+ "note": "A single directed cycle: one strongly connected component containing everything."
+}

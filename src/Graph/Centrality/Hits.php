@@ -89,10 +89,23 @@ final readonly class Hits
             $nextAuthorities = self::normalise(array_values($nextAuthorities));
             $nextHubs = self::normalise(array_values($nextHubs));
 
+            // Both vectors, not one of them. The two are coupled and they do
+            // not move together: on a graph where every node has in-degree 1
+            // the authority vector is uniform after the first step and stays
+            // put for that step, while the hub vector is still far from where
+            // it is going. Measuring only the authorities declared victory
+            // there after a single iteration and returned the hubs mid-flight
+            // -- [0.2, 0.2, 0.4, 0.2, 0] on a graph whose answer is
+            // [0, 0, 1, 0, 0].
+            //
+            // Every directed fixture in the suite was acyclic when this was
+            // written, and on an acyclic graph the two happen to settle
+            // together, so nothing caught it until a cycle was added.
             $drift = 0.0;
 
             for ($node = 0; $node < $order; $node++) {
-                $drift += abs($nextAuthorities[$node] - $authorities[$node]);
+                $drift += abs($nextAuthorities[$node] - $authorities[$node])
+                    + abs($nextHubs[$node] - $hubs[$node]);
             }
 
             $authorities = $nextAuthorities;

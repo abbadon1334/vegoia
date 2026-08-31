@@ -1,0 +1,93 @@
+{
+ "directed": true,
+ "edges": [
+  [
+   0,
+   1,
+   1.0
+  ],
+  [
+   1,
+   2,
+   1.0
+  ],
+  [
+   2,
+   0,
+   1.0
+  ],
+  [
+   2,
+   3,
+   1.0
+  ],
+  [
+   3,
+   4,
+   1.0
+  ],
+  [
+   4,
+   5,
+   1.0
+  ],
+  [
+   5,
+   3,
+   1.0
+  ]
+ ],
+ "expected": {
+  "betweenness": [
+   1.0,
+   4.0,
+   7.0,
+   7.0,
+   4.0,
+   1.0
+  ],
+  "hits_authorities": [
+   0.3819660112501051,
+   0.0,
+   0.0,
+   0.6180339887498949,
+   0.0,
+   0.0
+  ],
+  "hits_hubs": [
+   0.0,
+   0.0,
+   0.6180339887498949,
+   0.0,
+   0.0,
+   0.3819660112501051
+  ],
+  "in_degree": [
+   1.0,
+   1.0,
+   1.0,
+   2.0,
+   1.0,
+   1.0
+  ],
+  "out_degree": [
+   1.0,
+   1.0,
+   2.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "pagerank": [
+   0.06444484531607514,
+   0.07977811851866387,
+   0.0928114007408643,
+   0.2688884880172582,
+   0.25355521481466947,
+   0.24052193259246904
+  ]
+ },
+ "name": "two_strong_components",
+ "nodes": 6,
+ "note": "Two cycles joined by one edge in one direction only. Weakly connected as a whole, strongly connected in two pieces, and no path back from the second to the first."
+}

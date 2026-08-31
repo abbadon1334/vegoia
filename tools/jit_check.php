@@ -142,6 +142,12 @@ echo md5(json_encode([
     'components' => Connectivity::components($graph)->membership(),
     'bfs' => $g(BreadthFirst::distancesFrom($graph, 0)),
     'dijkstra' => $g(Dijkstra::distancesFrom($graph, 0)),
+    // structure: two iterative depth-first walks with an explicit stack,
+    // which is a shape the JIT rewrites heavily
+    'strong_components' => Connectivity::stronglyConnectedComponents($directed)->membership(),
+    'acyclic' => Connectivity::isAcyclic($directed) ? 1 : 0,
+    'bridges' => Connectivity::bridges($graph),
+    'articulation' => Connectivity::articulationPoints($graph),
     // link prediction: a sorted merge of two neighbour runs, and a two-hop
     // candidate walk, both of which the JIT compiles eagerly
     'link_scores' => $g([

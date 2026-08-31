@@ -125,6 +125,17 @@ CATALOGUE = [
      "A directed path. HITS is degenerate here; PageRank and betweenness are not."),
     ("two_components", [(0, 1), (1, 0), (2, 3)], 4,
      "Disconnected and directed: PageRank's teleportation has to carry it."),
+    # The rest exist for strong connectivity. Every other directed fixture here
+    # is acyclic, which makes strongly connected components the trivial answer
+    # -- one per node -- and a trivial answer tests nothing.
+    ("three_cycle", [(0, 1), (1, 2), (2, 0)], 3,
+     "A single directed cycle: one strongly connected component containing everything."),
+    ("two_strong_components", [(0, 1), (1, 2), (2, 0), (3, 4), (4, 5), (5, 3), (2, 3)], 6,
+     "Two cycles joined by one edge in one direction only. Weakly connected as a whole, "
+     "strongly connected in two pieces, and no path back from the second to the first."),
+    ("cycle_with_tail", [(0, 1), (1, 2), (2, 0), (2, 3), (3, 4)], 5,
+     "A cycle with a path leading out of it: one component of three and two of one, which "
+     "is the shape that catches an implementation collapsing weak and strong."),
 ]
 
 

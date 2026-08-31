@@ -1,0 +1,473 @@
+{
+ "directed": {
+  "bow_tie": {
+   "components": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ]
+   ],
+   "is_directed_acyclic": true,
+   "is_strongly_connected": false,
+   "weak_components": [
+    [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   ]
+  },
+  "chain": {
+   "components": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ],
+   "is_directed_acyclic": true,
+   "is_strongly_connected": false,
+   "weak_components": [
+    [
+     0,
+     1,
+     2,
+     3
+    ]
+   ]
+  },
+  "cycle_with_tail": {
+   "components": [
+    [
+     0,
+     1,
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ]
+   ],
+   "is_directed_acyclic": false,
+   "is_strongly_connected": false,
+   "weak_components": [
+    [
+     0,
+     1,
+     2,
+     3,
+     4
+    ]
+   ]
+  },
+  "hub_and_authority": {
+   "components": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ],
+    [
+     5
+    ]
+   ],
+   "is_directed_acyclic": true,
+   "is_strongly_connected": false,
+   "weak_components": [
+    [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   ]
+  },
+  "star_out": {
+   "components": [
+    [
+     0
+    ],
+    [
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ],
+    [
+     4
+    ]
+   ],
+   "is_directed_acyclic": true,
+   "is_strongly_connected": false,
+   "weak_components": [
+    [
+     0,
+     1,
+     2,
+     3,
+     4
+    ]
+   ]
+  },
+  "three_cycle": {
+   "components": [
+    [
+     0,
+     1,
+     2
+    ]
+   ],
+   "is_directed_acyclic": false,
+   "is_strongly_connected": true,
+   "weak_components": [
+    [
+     0,
+     1,
+     2
+    ]
+   ]
+  },
+  "two_components": {
+   "components": [
+    [
+     0,
+     1
+    ],
+    [
+     2
+    ],
+    [
+     3
+    ]
+   ],
+   "is_directed_acyclic": false,
+   "is_strongly_connected": false,
+   "weak_components": [
+    [
+     0,
+     1
+    ],
+    [
+     2,
+     3
+    ]
+   ]
+  },
+  "two_strong_components": {
+   "components": [
+    [
+     0,
+     1,
+     2
+    ],
+    [
+     3,
+     4,
+     5
+    ]
+   ],
+   "is_directed_acyclic": false,
+   "is_strongly_connected": false,
+   "weak_components": [
+    [
+     0,
+     1,
+     2,
+     3,
+     4,
+     5
+    ]
+   ]
+  }
+ },
+ "generator": "networkx: strongly_connected_components, weakly_connected_components, is_strongly_connected, is_directed_acyclic_graph, bridges, articulation_points",
+ "note": "Components are sorted within and between, and bridges are sorted pairs sorted again, because neither order carries meaning and pinning NetworkX's traversal order would fail any implementation that walked the graph differently.",
+ "regenerate": "python3 tools/generate_structure_fixtures.py",
+ "undirected": {
+  "complete_8": {
+   "articulation_points": [],
+   "bridges": []
+  },
+  "davis": {
+   "articulation_points": [],
+   "bridges": []
+  },
+  "disjoint_cliques": {
+   "articulation_points": [],
+   "bridges": []
+  },
+  "florentine": {
+   "articulation_points": [
+    1,
+    6,
+    8,
+    12
+   ],
+   "bridges": [
+    [
+     0,
+     8
+    ],
+    [
+     1,
+     5
+    ],
+    [
+     6,
+     7
+    ],
+    [
+     8,
+     12
+    ],
+    [
+     9,
+     12
+    ]
+   ]
+  },
+  "grid_4x4": {
+   "articulation_points": [],
+   "bridges": []
+  },
+  "lesmis": {
+   "articulation_points": [
+    28,
+    31,
+    46,
+    51,
+    53,
+    62,
+    70,
+    73
+   ],
+   "bridges": [
+    [
+     7,
+     70
+    ],
+    [
+     11,
+     62
+    ],
+    [
+     19,
+     62
+    ],
+    [
+     20,
+     62
+    ],
+    [
+     22,
+     62
+    ],
+    [
+     28,
+     36
+    ],
+    [
+     31,
+     53
+    ],
+    [
+     32,
+     62
+    ],
+    [
+     33,
+     73
+    ],
+    [
+     38,
+     73
+    ],
+    [
+     41,
+     53
+    ],
+    [
+     43,
+     73
+    ],
+    [
+     46,
+     61
+    ],
+    [
+     51,
+     52
+    ],
+    [
+     54,
+     73
+    ],
+    [
+     62,
+     63
+    ],
+    [
+     62,
+     64
+    ],
+    [
+     68,
+     73
+    ]
+   ]
+  },
+  "path_10": {
+   "articulation_points": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+   ],
+   "bridges": [
+    [
+     0,
+     1
+    ],
+    [
+     1,
+     2
+    ],
+    [
+     2,
+     3
+    ],
+    [
+     3,
+     4
+    ],
+    [
+     4,
+     5
+    ],
+    [
+     5,
+     6
+    ],
+    [
+     6,
+     7
+    ],
+    [
+     7,
+     8
+    ],
+    [
+     8,
+     9
+    ]
+   ]
+  },
+  "petersen": {
+   "articulation_points": [],
+   "bridges": []
+  },
+  "ring_of_cliques_10x5": {
+   "articulation_points": [],
+   "bridges": []
+  },
+  "star_10": {
+   "articulation_points": [
+    0
+   ],
+   "bridges": [
+    [
+     0,
+     1
+    ],
+    [
+     0,
+     2
+    ],
+    [
+     0,
+     3
+    ],
+    [
+     0,
+     4
+    ],
+    [
+     0,
+     5
+    ],
+    [
+     0,
+     6
+    ],
+    [
+     0,
+     7
+    ],
+    [
+     0,
+     8
+    ],
+    [
+     0,
+     9
+    ]
+   ]
+  },
+  "zachary": {
+   "articulation_points": [
+    0
+   ],
+   "bridges": [
+    [
+     0,
+     11
+    ]
+   ]
+  }
+ }
+}

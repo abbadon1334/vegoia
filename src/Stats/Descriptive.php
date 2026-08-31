@@ -55,7 +55,10 @@ final class Descriptive
     /** @param list<float> $values */
     private function __construct(
         private readonly array $values,
-        private readonly Precision $precision = Precision::Extended,
+        // No default: every caller states it, and a default here would be a
+        // second place for the answer to live -- unused, untested, and free to
+        // drift from the one in of().
+        private readonly Precision $precision,
     ) {
     }
 

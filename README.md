@@ -311,6 +311,30 @@ Honesty requires the next number too: igraph also ships a natively tuned
 of Vegoia with the JIT. That is what a C extension could still chase; nothing a
 subprocess architecture can reach.
 
+### Choosing accuracy or speed
+
+Extended arithmetic is the default and costs about ten times a plain
+computation. On most data it buys nothing; on data built to expose it, it buys
+five digits. Since you cannot tell which you have by looking at the answer,
+accuracy is the default and speed is the explicit choice:
+
+```php
+Descriptive::of($values);                      // extended, the default
+Descriptive::of($values, Precision::Fast);     // ordinary floating point
+$stats->with(Precision::Fast);                 // same sample, other way
+```
+
+Measured on 5000 values:
+
+| | mean | lag-1 autocorrelation | NumAcc4 digits |
+|---|---|---|---|
+| `Fast` | 0.029 ms | 0.18 ms | 9.00 |
+| `Extended` | 0.310 ms | 3.00 ms | **15.65** |
+
+`Fast` is not sloppy -- it is the same arithmetic numpy uses, and on two of the
+NIST datasets it scores higher than numpy does. Use it inside a loop over
+thousands of series; leave the default alone for one careful pass.
+
 ### Statistics, against Python and C
 
 The graph timings above are the ones that decide whether this library is

@@ -10,6 +10,7 @@ use function count;
 use function sqrt;
 
 use Vegoia\Exception\InvalidArgument;
+use Vegoia\Stats\Distribution\FisherSnedecor;
 use Vegoia\Support\CompensatedSum;
 
 /**
@@ -172,5 +173,27 @@ final readonly class OneWayAnova
         }
 
         return self::of(array_values($groups));
+    }
+
+    /**
+     * How often an F this large arises when every group has the same mean.
+     *
+     * The statistic on its own is not a result. An F of 21.0 sounds large and
+     * an F of 1.18 sounds small, but neither is readable without the degrees
+     * of freedom: the first is p = 2.6e-22 on (8, 180) and the second is
+     * p = 0.35 on (4, 20), and only one of those is worth reporting.
+     *
+     * The upper tail, computed directly. A one-way analysis of variance is
+     * one-sided by construction -- between-group variance can only inflate
+     * the ratio, never deflate it -- and the interesting p-values live far
+     * enough out that computing them as one minus the lower tail would return
+     * zero for everything past about fifteen digits.
+     */
+    public function pValue(): float
+    {
+        return new FisherSnedecor(
+            (float) $this->betweenDegreesOfFreedom,
+            (float) $this->withinDegreesOfFreedom,
+        )->survival($this->fStatistic);
     }
 }

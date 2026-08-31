@@ -233,7 +233,6 @@ final class LeastSquares
         }
 
         $coefficients = [];
-        $errors = [];
 
         for ($i = 0; $i < $parameters; $i++) {
             $value = new CompensatedSum();
@@ -243,27 +242,53 @@ final class LeastSquares
             }
 
             $coefficients[] = $value->value();
+        }
 
-            // (M C M')[i][i], without forming the full product.
-            $variance = new CompensatedSum();
+        // The whole of M C M', not only its diagonal.
+        //
+        // The diagonal alone was enough while the standard errors were all
+        // anyone could ask for, and leaving the covariance in the mapped
+        // basis then left the returned fit describing two different models:
+        // its coefficients and errors in powers of x, its covariance in
+        // powers of (x - shift) / scale. Nothing noticed until prediction
+        // intervals arrived and started reading the off-diagonal terms --
+        // on Wampler3 the interval for the fitted mean came out at half its
+        // true width, and C[0][0] was 942673 where the standard error it sat
+        // beside said 4632508.
+        /** @var list<list<float>> $covariance */
+        $covariance = [];
 
-            for ($a = 0; $a < $parameters; $a++) {
-                if ($transform[$i][$a] === 0.0) {
-                    continue;
-                }
+        for ($i = 0; $i < $parameters; $i++) {
+            $row = array_fill(0, $parameters, 0.0);
 
-                for ($b = 0; $b < $parameters; $b++) {
-                    if ($transform[$i][$b] === 0.0) {
+            for ($j = 0; $j < $parameters; $j++) {
+                $entry = new CompensatedSum();
+
+                for ($a = 0; $a < $parameters; $a++) {
+                    if ($transform[$i][$a] === 0.0) {
                         continue;
                     }
 
-                    $variance->add(
-                        $transform[$i][$a] * $fit->covariance[$a][$b] * $transform[$i][$b]
-                    );
+                    for ($b = 0; $b < $parameters; $b++) {
+                        if ($transform[$j][$b] === 0.0) {
+                            continue;
+                        }
+
+                        $entry->add($transform[$i][$a] * $fit->covariance[$a][$b] * $transform[$j][$b]);
+                    }
                 }
+
+                $row[$j] = $entry->value();
             }
 
-            $errors[] = sqrt(abs($variance->value()));
+            /** @var list<float> $row */
+            $covariance[] = $row;
+        }
+
+        $errors = [];
+
+        for ($i = 0; $i < $parameters; $i++) {
+            $errors[] = sqrt(abs($covariance[$i][$i]));
         }
 
         return new Fit(
@@ -276,7 +301,8 @@ final class LeastSquares
             $fit->parameters,
             $fit->degreesOfFreedom,
             $fit->hasIntercept,
-            $fit->covariance,
+            $covariance,
+            $fit->totalSumOfSquares,
         );
     }
 
@@ -367,18 +393,24 @@ final class LeastSquares
         $sigma = sqrt(abs($variance));
 
         $covariance = self::covariance($triangular, $columns, $variance);
+        [$rSquared, $totalSumOfSquares] = self::explainedVariance(
+            $response,
+            $residualSumOfSquares,
+            $withIntercept,
+        );
 
         return new Fit(
             $coefficients,
             self::standardErrorsFrom($covariance, $columns),
             $sigma,
-            self::rSquared($response, $residualSumOfSquares, $withIntercept),
+            $rSquared,
             $residualSumOfSquares,
             $rows,
             $columns,
             $degreesOfFreedom,
             $withIntercept,
             $covariance,
+            $totalSumOfSquares,
         );
     }
 
@@ -600,10 +632,22 @@ final class LeastSquares
      * rather than about the mean -- the convention NIST certifies against, and
      * the one that keeps R-squared in [0, 1] for such a model.
      *
-     * @param list<float> $response
+     * The total is returned alongside rather than discarded. The overall F
+     * test needs it: forming F from R-squared alone means dividing by
+     * 1 - R-squared, and on Norris R-squared is 0.99999999982, so that
+     * subtraction throws away nine digits exactly where the fit is good and
+     * the test is worth running.
      */
-    private static function rSquared(array $response, float $residualSumOfSquares, bool $withIntercept): float
-    {
+    /**
+     * @param list<float> $response
+     *
+     * @return array{float, float} R-squared, and the total sum of squares it came from
+     */
+    private static function explainedVariance(
+        array $response,
+        float $residualSumOfSquares,
+        bool $withIntercept,
+    ): array {
         $total = new CompensatedSum();
 
         if ($withIntercept) {
@@ -621,9 +665,9 @@ final class LeastSquares
         $totalSumOfSquares = $total->value();
 
         if ($totalSumOfSquares === 0.0) {
-            return 1.0;
+            return [1.0, 0.0];
         }
 
-        return 1.0 - $residualSumOfSquares / $totalSumOfSquares;
+        return [1.0 - $residualSumOfSquares / $totalSumOfSquares, $totalSumOfSquares];
     }
 }

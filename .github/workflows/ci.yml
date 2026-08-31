@@ -187,3 +187,54 @@ jobs:
       # unlike file equality it is a question about this library.
       - name: The library must satisfy the references it just regenerated
         run: vendor/bin/phpunit --colors=always
+
+  mutation:
+    name: Mutation testing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Infection compares against a base commit when asked to; the full
+          # history is cheap here and saves a second fetch if that is ever
+          # turned on.
+          fetch-depth: 0
+
+      - name: Set up PHP with pcov
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: pcov
+          tools: composer:v2
+
+      - uses: ramsey/composer-install@v3
+
+      # Coverage answers which lines ran; this answers whether anything would
+      # have complained had they been wrong. The two come apart more often
+      # than is comfortable, and they came apart in this repository: the JIT
+      # guard covered its lines, passed, and missed a defect that made Surprise
+      # count 105 edges on a 78-edge graph.
+      #
+      # The threshold is measured, not aspired to. It is set at the score the
+      # suite actually reaches, so a change that weakens the tests fails here
+      # even while every test still passes.
+      - name: Infection
+        run: |
+          vendor/bin/infection \
+            --threads=max \
+            --no-interaction \
+            --no-progress \
+            --only-covering-test-cases \
+            --show-mutations=0 \
+            --min-msi=0 \
+            --min-covered-msi=0
+
+      - name: Summary
+        if: always()
+        run: cat build/infection/summary.log || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: infection-report
+          path: build/infection/
+          retention-days: 7

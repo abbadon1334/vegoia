@@ -1,0 +1,30 @@
+{
+    // Mutation testing: does the suite notice when the code is wrong?
+    //
+    // Coverage says which lines ran. That is a weaker question than it looks,
+    // and this library has already been caught by the difference -- the JIT
+    // guard exercised Leiden, PageRank and least squares, reported that it
+    // passed, and missed a defect in Surprise that made it count 105 edges on
+    // a 78-edge graph. Lines were covered. Nothing was checked.
+    //
+    // Infection changes one operator or constant at a time and reruns the
+    // tests. A mutant that survives is a change to the library that no
+    // assertion objects to, which is either a test worth writing or a line
+    // worth deleting.
+    "$schema": "vendor/infection/infection/resources/schema.json",
+    "source": {
+        "directories": ["src"]
+    },
+    "logs": {
+        "text": "build/infection/infection.log",
+        "summary": "build/infection/summary.log",
+        "json": "build/infection/infection.json",
+        "stryker": {
+            "report": "main"
+        }
+    },
+    "tmpDir": "build/infection/tmp",
+    "mutators": {
+        "@default": true
+    }
+}

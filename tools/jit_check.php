@@ -211,9 +211,18 @@ echo md5(json_encode([
 ])), "\n";
 CODE;
 
+// Extensions that override zend_execute_ex switch the JIT off, and PHP says
+// so on stderr and then runs anyway. pcov is one of them, so as soon as a
+// coverage driver was installed on the development machine this check began
+// comparing the interpreter against the interpreter and reporting that they
+// agreed. A guard that cannot fail is worse than none; the JIT lane therefore
+// disables such extensions and then asks opcache whether the JIT is really
+// on, rather than assuming the flags took effect.
+$disable = '-d pcov.enabled=0 -d xdebug.mode=off';
+
 $run = static function (string $flags) use ($probe, $root): string {
     $command = sprintf(
-        'php %s -r %s %s',
+        'php %s -r %s %s 2>/dev/null',
         $flags,
         escapeshellarg($probe),
         escapeshellarg($root),
@@ -222,8 +231,27 @@ $run = static function (string $flags) use ($probe, $root): string {
     return trim((string) shell_exec($command));
 };
 
-$interpreted = $run('');
-$jitted = $run('-d opcache.enable_cli=1 -d opcache.jit=tracing -d opcache.jit_buffer_size=128M');
+$jitFlags = $disable . ' -d opcache.enable_cli=1 -d opcache.jit=tracing -d opcache.jit_buffer_size=128M';
+
+$state = trim((string) shell_exec(sprintf(
+    'php %s -r %s 2>/dev/null',
+    $jitFlags,
+    escapeshellarg(
+        '$s = function_exists("opcache_get_status") ? @opcache_get_status(false) : null;'
+        . 'echo ($s["jit"]["on"] ?? false) ? "on" : "off";'
+    ),
+)));
+
+if ($state !== 'on') {
+    fwrite(STDERR, "FAIL: the JIT would not turn on, so nothing here was tested.\n");
+    fwrite(STDERR, "      Usually an extension that overrides zend_execute_ex -- pcov, xdebug --\n");
+    fwrite(STDERR, "      or opcache not being loaded at all.\n");
+
+    exit(1);
+}
+
+$interpreted = $run($disable);
+$jitted = $run($jitFlags);
 
 printf("interpreter: %s\n", $interpreted);
 printf("tracing JIT: %s\n", $jitted);
@@ -240,4 +268,4 @@ if ($interpreted !== $jitted) {
     exit(1);
 }
 
-echo "OK: identical results with and without the JIT.\n";
+echo "OK: the JIT was on, and gave identical results.\n";

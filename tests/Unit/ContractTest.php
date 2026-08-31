@@ -44,50 +44,53 @@ final class ContractTest extends TestCase
     /**
      * Arguments that must be refused.
      *
-     * @return iterable<string, array{callable(): mixed}>
+     * @return iterable<string, array{callable(): mixed, string}>
      */
     public static function refused(): iterable
     {
         $graph = Graph::undirected(3, [[0, 1], [1, 2]]);
         $directed = Graph::directed(3, [[0, 1], [1, 2]]);
 
-        yield 'a graph of negative order' => [static fn () => Graph::undirected(-1)];
+        yield 'a graph of negative order' => [static fn () => Graph::undirected(-1), 'cannot have -1 nodes'];
         // The declared type forbids both of these, which is why the runtime
         // guard is worth having and worth testing: the type is advice to a
         // static analyser, and a caller without one still gets an answer.
         /** @phpstan-ignore argument.type */
-        yield 'an edge that is not a pair' => [static fn () => Graph::undirected(2, [[0]])];
+        yield 'an edge that is not a pair' => [static fn () => Graph::undirected(2, [[0]]), 'expected [from, to]'];
         /** @phpstan-ignore argument.type */
-        yield 'an edge that is not an array' => [static fn () => Graph::undirected(2, ['nonsense'])];
-        yield 'an edge leaving the node set' => [static fn () => Graph::undirected(2, [[0, 5]])];
-        yield 'an edge arriving from outside' => [static fn () => Graph::undirected(2, [[-1, 0]])];
-        yield 'an infinite edge weight' => [static fn () => Graph::undirected(2, [[0, 1, INF]])];
-        yield 'a degree outside the node set' => [static fn () => $graph->degree(3)];
-        yield 'neighbours outside the node set' => [static fn () => iterator_to_array($graph->neighbours(3))];
+        yield 'an edge that is not an array' => [static fn () => Graph::undirected(2, ['nonsense']), 'expected [from, to]'];
+        yield 'an edge leaving the node set' => [static fn () => Graph::undirected(2, [[0, 5]]), 'Node 5 does not exist'];
+        yield 'an edge arriving from outside' => [static fn () => Graph::undirected(2, [[-1, 0]]), 'Node -1 does not exist'];
+        yield 'an infinite edge weight' => [static fn () => Graph::undirected(2, [[0, 1, INF]]), 'non-finite weight'];
+        yield 'a degree outside the node set' => [static fn () => $graph->degree(3), 'Node 3 does not exist'];
+        yield 'neighbours outside the node set' => [static fn () => iterator_to_array($graph->neighbours(3)), 'Node 3 does not exist'];
 
-        yield 'a negative resolution' => [static fn () => new Modularity(-1.0)];
-        yield 'zero randomness in Leiden' => [static fn () => new Leiden(new Modularity(), 1, 0.0)];
-        yield 'zero maximum iterations' => [static fn () => new Leiden(new Modularity(), 1, 0.01, 0)];
-        yield 'zero passes' => [static fn () => new Leiden(new Modularity(), 1, 0.01, 10, 0)];
+        yield 'a negative resolution' => [static fn () => new Modularity(-1.0), 'Resolution must lie'];
+        yield 'zero randomness in Leiden' => [static fn () => new Leiden(new Modularity(), 1, 0.0), 'Randomness must lie'];
+        yield 'zero maximum iterations' => [static fn () => new Leiden(new Modularity(), 1, 0.01, 0), 'Maximum iterations must lie'];
+        yield 'zero passes' => [static fn () => new Leiden(new Modularity(), 1, 0.01, 10, 0), 'Iterations must lie'];
         yield 'Leiden on a directed graph' => [
             static fn () => Leiden::modularity(seed: 1)->partition($directed),
+            'undirected graphs only',
         ];
 
-        yield 'a damping factor above one' => [static fn () => new PageRank(1.5)];
-        yield 'a negative damping factor' => [static fn () => new PageRank(-0.1)];
+        yield 'a damping factor above one' => [static fn () => new PageRank(1.5), 'Damping factor must lie'];
+        yield 'a negative damping factor' => [static fn () => new PageRank(-0.1), 'Damping factor must lie'];
         // The bounds are open: a damping factor of exactly 1 never restarts
         // and exactly 0 never follows a link, and neither is PageRank.
-        yield 'a damping factor of exactly one' => [static fn () => new PageRank(1.0)];
-        yield 'a damping factor of exactly zero' => [static fn () => new PageRank(0.0)];
-        yield 'a zero Katz alpha' => [static fn () => new Katz(0.0)];
+        yield 'a damping factor of exactly one' => [static fn () => new PageRank(1.0), 'Damping factor must lie'];
+        yield 'a damping factor of exactly zero' => [static fn () => new PageRank(0.0), 'Damping factor must lie'];
+        yield 'a zero Katz alpha' => [static fn () => new Katz(0.0), 'Alpha must lie'];
 
         yield 'a breadth-first source outside the graph' => [
             static fn () => BreadthFirst::distancesFrom($graph, 3),
+            'Node 3 does not exist',
         ];
-        yield 'a Dijkstra source outside the graph' => [static fn () => Dijkstra::distancesFrom($graph, 3)];
-        yield 'a Dijkstra destination outside the graph' => [static fn () => Dijkstra::shortestPath($graph, 0, 3)];
+        yield 'a Dijkstra source outside the graph' => [static fn () => Dijkstra::distancesFrom($graph, 3), 'Node 3 does not exist'];
+        yield 'a Dijkstra destination outside the graph' => [static fn () => Dijkstra::shortestPath($graph, 0, 3), 'Node 3 does not exist'];
         yield 'a negative edge weight in Dijkstra' => [
             static fn () => Dijkstra::distancesFrom(Graph::undirected(2, [[0, 1, -1.0]]), 0),
+            'non-negative weights',
         ];
 
         yield 'agreement between partitions of different sizes' => [
@@ -95,66 +98,123 @@ final class ContractTest extends TestCase
                 Partition::fromMembership([0, 0, 1]),
                 Partition::fromMembership([0, 1]),
             ),
+            'different numbers of nodes',
         ];
 
-        yield 'the mean of nothing' => [static fn () => Descriptive::of([])->mean()];
-        yield 'the variance of nothing' => [static fn () => Descriptive::of([])->variance()];
-        yield 'a correlation of one point' => [static fn () => Correlation::pearson([1.0], [2.0])];
+        yield 'a zero autocorrelation lag' => [
+            static fn () => Descriptive::of([1.0, 2.0, 3.0])->autocorrelation(0),
+            'Autocorrelation lag must lie',
+        ];
+        yield 'an autocorrelation lag as long as the sample' => [
+            static fn () => Descriptive::of([1.0, 2.0, 3.0])->autocorrelation(3),
+            'Lag-3 autocorrelation needs',
+        ];
+        yield 'an autocorrelation of one value' => [
+            static fn () => Descriptive::of([1.0])->autocorrelation(1),
+            'Lag-1 autocorrelation needs',
+        ];
+        yield 'the skewness of two values' => [static fn () => Descriptive::of([1.0, 2.0])->skewness(), 'Skewness needs at least 3'];
+        yield 'the kurtosis of three values' => [
+            static fn () => Descriptive::of([1.0, 2.0, 3.0])->kurtosis(),
+            'Kurtosis needs at least 4',
+        ];
+        yield 'a quantile below zero' => [static fn () => Descriptive::of([1.0, 2.0])->quantile(-0.1), 'Quantile probability must lie'];
+        yield 'a quantile above one' => [static fn () => Descriptive::of([1.0, 2.0])->quantile(1.1), 'Quantile probability must lie'];
+        yield 'the mean of nothing' => [static fn () => Descriptive::of([])->mean(), 'the mean of an empty dataset'];
+        yield 'the variance of nothing' => [static fn () => Descriptive::of([])->variance(), 'Sample variance needs'];
+        yield 'a correlation of one point' => [static fn () => Correlation::pearson([1.0], [2.0]), 'Correlation needs at least'];
         yield 'a correlation of unequal lengths' => [
             static fn () => Correlation::pearson([1.0, 2.0], [1.0, 2.0, 3.0]),
+            'paired samples',
         ];
         yield 'a Spearman of unequal lengths' => [
             static fn () => Correlation::spearman([1.0, 2.0], [1.0]),
+            'paired samples',
         ];
         yield 'a Kendall of unequal lengths' => [
             static fn () => Correlation::kendall([1.0, 2.0], [1.0]),
+            'paired samples',
         ];
 
-        yield 'an analysis of variance of one group' => [static fn () => OneWayAnova::of([[1.0, 2.0]])];
-        yield 'an analysis of variance with an empty group' => [
-            static fn () => OneWayAnova::of([[1.0, 2.0], []]),
+        yield 'an analysis of variance of one group' => [static fn () => OneWayAnova::of([[1.0, 2.0]]), 'One-way ANOVA needs at least'];
+        // Empty groups are dropped rather than refused, so this case never
+        // reached the guard its name claimed. Two groups of one observation
+        // is what reaches the second one: an analysis of variance needs more
+        // observations than it has groups.
+        yield 'as many observations as groups' => [
+            static fn () => OneWayAnova::of([[1.0], [2.0]]),
+            'more observations than groups',
         ];
         yield 'grouped values against mismatched labels' => [
             static fn () => OneWayAnova::grouped([1.0, 2.0], ['a']),
+            'one label per observation',
         ];
 
-        yield 'a regression with no data' => [static fn () => LeastSquares::fit([], [])];
+        yield 'a regression with no data' => [static fn () => LeastSquares::fit([], []), 'a regression of an empty dataset'];
         yield 'a regression with mismatched lengths' => [
             static fn () => LeastSquares::fit([[1.0], [2.0]], [1.0]),
+            'the response has',
         ];
+        // Three rows, because with two the row-count guard fires first and the
+        // raggedness is never reached -- which is what this case did before
+        // while its name said otherwise.
         yield 'a regression with a ragged design' => [
-            static fn () => LeastSquares::fit([[1.0, 2.0], [3.0]], [1.0, 2.0]),
+            static fn () => LeastSquares::fit([[1.0, 2.0], [3.0], [4.0, 5.0]], [1.0, 2.0, 3.0]),
+            'Design row 1 has the wrong width',
         ];
         yield 'a regression with fewer rows than parameters' => [
             static fn () => LeastSquares::fit([[1.0, 2.0]], [1.0]),
+            'parameters needs at least',
         ];
         yield 'a polynomial of degree zero' => [
             static fn () => LeastSquares::polynomial([1.0, 2.0, 3.0], [1.0, 2.0, 3.0], 0),
+            'Polynomial degree must lie',
         ];
-        yield 'a polynomial with no data' => [static fn () => LeastSquares::polynomial([], [], 1)];
+        yield 'a polynomial with no data' => [static fn () => LeastSquares::polynomial([], [], 1), 'a polynomial fit of an empty dataset'];
         yield 'a polynomial with mismatched lengths' => [
             static fn () => LeastSquares::polynomial([1.0, 2.0], [1.0], 1),
+            'the response has',
         ];
 
         yield 'zero neighbours' => [
             static fn () => NearestNeighbours::cosine([1.0], ['a' => [1.0]], 0),
+            'Neighbour count must lie',
         ];
         yield 'zero selections' => [
             static fn () => MaximalMarginalRelevance::select([1.0], ['a' => [1.0]], 0, 0.5),
+            'Selection count must lie',
         ];
         yield 'a lambda above one' => [
             static fn () => MaximalMarginalRelevance::select([1.0], ['a' => [1.0]], 1, 1.5),
+            'Lambda must lie',
         ];
         yield 'a negative lambda' => [
             static fn () => MaximalMarginalRelevance::select([1.0], ['a' => [1.0]], 1, -0.5),
+            'Lambda must lie',
         ];
     }
 
-    /** @param callable(): mixed $call */
+    /**
+     * @param callable(): mixed $call
+     * @param string            $identifies a fragment of the message naming the
+     *                                      guard that has to be the one to speak
+     */
     #[DataProvider('refused')]
-    public function test_it_refuses_what_it_cannot_answer(callable $call): void
+    public function test_it_refuses_what_it_cannot_answer(callable $call, string $identifies): void
     {
+        // The exception class alone is not enough, and assuming it was hid a
+        // live mutant for a whole release of this file. Delete the throw from
+        // Descriptive::mean() and an empty dataset still raises
+        // InvalidArgument -- from CompensatedSum, three frames further down,
+        // complaining about a zero divisor. Every assertion here passed.
+        // Naming the guard is what tells the two apart.
+        //
+        // The fragment identifies, it does not transcribe: which quantity or
+        // parameter was refused is part of the contract, because it is how a
+        // caller knows what to fix. The wording around it is not, and pinning
+        // that would make the suite brittle for nothing.
         $this->expectException(InvalidArgument::class);
+        $this->expectExceptionMessageMatches('/' . preg_quote($identifies, '/') . '/i');
 
         $call();
     }

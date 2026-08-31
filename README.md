@@ -220,6 +220,26 @@ respects them and asks whether everything can reach everything. Only the second
 is an equivalence relation, and only the second says whether a citation graph
 has real cycles or merely looks like it.
 
+### A sparse skeleton of a dense graph
+
+```php
+use Vegoia\Graph\SpanningTree;
+
+// Given a similarity graph -- kNN over embeddings, cosine over TF-IDF -- the
+// maximum spanning forest keeps the strongest link out of every node and
+// discards the rest.
+$edges = SpanningTree::maximum($similarity);
+$skeleton = SpanningTree::asGraph($similarity, $edges);
+
+SpanningTree::minimum($graph);
+SpanningTree::weight($graph, dearest: true);
+```
+
+A disconnected graph gives a forest, one tree per component, which is the
+general case rather than an error: a knowledge graph with two unrelated
+clusters has no spanning tree and its spanning forest is still the right
+answer. The result has n - c edges, not n - 1.
+
 ### Which edges are probably missing
 
 ```php
@@ -290,6 +310,7 @@ src/
 │   ├── Clustering.php         triangles, local coefficient, transitivity
 │   ├── KCore.php              core numbers and k-core subgraphs
 │   ├── LinkPrediction.php     five measures for the edges that are missing
+│   ├── SpanningTree.php       Kruskal with union-find; minimum and maximum
 │   ├── Community/
 │   │   ├── Leiden.php         local moving → refinement → aggregation
 │   │   ├── LabelPropagation.php   linear time, no objective function
@@ -611,6 +632,7 @@ Only needed when adding graphs or datasets. Requires `python-igraph`,
 python3 tools/generate_graph_fixtures.py              # golden graph fixtures
 python3 tools/generate_structure_fixtures.py          # components, bridges, cut vertices
 python3 tools/generate_link_prediction_fixtures.py    # five measures, every pair
+python3 tools/generate_spanning_tree_fixtures.py      # forest weight and edge count
 python3 tools/generate_label_propagation_fixtures.py  # the spread over fifty seeds
 python3 tools/generate_special_function_fixtures.py   # erf, lgamma, incomplete gamma/beta
 python3 tools/generate_distribution_fixtures.py       # both tails and the quantiles
@@ -655,6 +677,8 @@ NIST source data lives in `resources/fixtures/nist/` and comes from
   Networks 25(3), 211–230.
 - T. Zhou, L. Lü & Y.-C. Zhang (2009). *Predicting missing links via local
   information.* The European Physical Journal B 71, 623–630.
+- J.B. Kruskal (1956). *On the shortest spanning subtree of a graph and the
+  traveling salesman problem.* Proceedings of the AMS 7(1), 48–50.
 - M.J. Wichura (1988). *Algorithm AS 241: the percentage points of the normal
   distribution.* Applied Statistics 37(3), 477–484.
 - C. Lanczos (1964). *A precision approximation of the gamma function.* SIAM

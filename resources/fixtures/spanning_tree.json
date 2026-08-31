@@ -1,0 +1,150 @@
+{
+ "generator": "networkx.minimum_spanning_edges and maximum_spanning_edges",
+ "graphs": {
+  "complete_8": {
+   "components": 1,
+   "edges_expected": 7,
+   "maximum": {
+    "edges": 7,
+    "weight": 7.0
+   },
+   "minimum": {
+    "edges": 7,
+    "weight": 7.0
+   },
+   "nodes": 8
+  },
+  "davis": {
+   "components": 1,
+   "edges_expected": 31,
+   "maximum": {
+    "edges": 31,
+    "weight": 31.0
+   },
+   "minimum": {
+    "edges": 31,
+    "weight": 31.0
+   },
+   "nodes": 32
+  },
+  "disjoint_cliques": {
+   "components": 3,
+   "edges_expected": 9,
+   "maximum": {
+    "edges": 9,
+    "weight": 9.0
+   },
+   "minimum": {
+    "edges": 9,
+    "weight": 9.0
+   },
+   "nodes": 12
+  },
+  "florentine": {
+   "components": 1,
+   "edges_expected": 14,
+   "maximum": {
+    "edges": 14,
+    "weight": 14.0
+   },
+   "minimum": {
+    "edges": 14,
+    "weight": 14.0
+   },
+   "nodes": 15
+  },
+  "grid_4x4": {
+   "components": 1,
+   "edges_expected": 15,
+   "maximum": {
+    "edges": 15,
+    "weight": 15.0
+   },
+   "minimum": {
+    "edges": 15,
+    "weight": 15.0
+   },
+   "nodes": 16
+  },
+  "lesmis": {
+   "components": 1,
+   "edges_expected": 76,
+   "maximum": {
+    "edges": 76,
+    "weight": 366.0
+   },
+   "minimum": {
+    "edges": 76,
+    "weight": 105.0
+   },
+   "nodes": 77
+  },
+  "path_10": {
+   "components": 1,
+   "edges_expected": 9,
+   "maximum": {
+    "edges": 9,
+    "weight": 9.0
+   },
+   "minimum": {
+    "edges": 9,
+    "weight": 9.0
+   },
+   "nodes": 10
+  },
+  "petersen": {
+   "components": 1,
+   "edges_expected": 9,
+   "maximum": {
+    "edges": 9,
+    "weight": 9.0
+   },
+   "minimum": {
+    "edges": 9,
+    "weight": 9.0
+   },
+   "nodes": 10
+  },
+  "ring_of_cliques_10x5": {
+   "components": 1,
+   "edges_expected": 49,
+   "maximum": {
+    "edges": 49,
+    "weight": 49.0
+   },
+   "minimum": {
+    "edges": 49,
+    "weight": 49.0
+   },
+   "nodes": 50
+  },
+  "star_10": {
+   "components": 1,
+   "edges_expected": 9,
+   "maximum": {
+    "edges": 9,
+    "weight": 9.0
+   },
+   "minimum": {
+    "edges": 9,
+    "weight": 9.0
+   },
+   "nodes": 10
+  },
+  "zachary": {
+   "components": 1,
+   "edges_expected": 33,
+   "maximum": {
+    "edges": 33,
+    "weight": 120.0
+   },
+   "minimum": {
+    "edges": 33,
+    "weight": 68.0
+   },
+   "nodes": 34
+  }
+ },
+ "note": "Total weight and edge count, not the edge set. A spanning tree is not unique when weights tie, and these fixtures are unweighted or nearly so; pinning the edges would pin NetworkX's tie-breaking, which is not a property of the answer.",
+ "regenerate": "python3 tools/generate_spanning_tree_fixtures.py"
+}

@@ -54,6 +54,7 @@ use Vegoia\Graph\Graph;
 use Vegoia\Graph\KCore;
 use Vegoia\Graph\LinkMeasure;
 use Vegoia\Graph\LinkPrediction;
+use Vegoia\Graph\SpanningTree;
 use Vegoia\Graph\Partition;
 use Vegoia\Graph\Path\BreadthFirst;
 use Vegoia\Graph\Path\Dijkstra;
@@ -147,6 +148,11 @@ echo md5(json_encode([
     // termination depends on values the JIT is free to keep in registers
     'label_propagation' => new LabelPropagation(7)->partition($graph)->membership(),
     'label_propagation_weighted' => new LabelPropagation(3)->partition($graph)->count(),
+    // spanning forests: a sort with a tie-break plus union-find with path
+    // compression, which mutates an array while walking it
+    'minimum_spanning' => SpanningTree::minimum($graph),
+    'maximum_spanning' => SpanningTree::maximum($graph),
+    'spanning_weight' => $n(SpanningTree::weight($graph)),
     // structure: two iterative depth-first walks with an explicit stack,
     // which is a shape the JIT rewrites heavily
     'strong_components' => Connectivity::stronglyConnectedComponents($directed)->membership(),

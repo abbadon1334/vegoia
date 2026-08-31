@@ -218,7 +218,7 @@ final class InferenceTest extends TestCase
          * @var array{
          *     rank_deficient: bool,
          *     residual_standard_deviation: float|null,
-         *     statsmodels: array{predictions: list<array{
+         *     statsmodels?: array{predictions: list<array{
          *         row: int, design: list<float>, certified_fitted: string,
          *         statsmodels_fitted: float, statsmodels_fitted_accuracy: float|null,
          *         statsmodels_mean_half_width: float, statsmodels_prediction_half_width: float
@@ -228,7 +228,9 @@ final class InferenceTest extends TestCase
         if ($entry['rank_deficient']) {
             self::markTestSkipped(
                 "{$name}: the design matrix is rank deficient, so statsmodels fits it through a "
-                . 'pseudo-inverse and its intervals describe that fallback rather than the model'
+                . 'pseudo-inverse and its intervals describe that fallback rather than the model. '
+                . 'The fixture records nothing from it for that reason -- the numbers move '
+                . 'between machines on identical software.'
             );
         }
 
@@ -239,6 +241,10 @@ final class InferenceTest extends TestCase
         // own data. Every interval there is a point, and what both libraries
         // report is their own residual noise rather than a width.
         $exactFit = $entry['residual_standard_deviation'] === 0.0;
+
+        // Present on every dataset that reaches here: the rank-deficient ones
+        // return above, and they are the only ones the fixture omits it for.
+        self::assertArrayHasKey('statsmodels', $entry, $name);
 
         foreach ($entry['statsmodels']['predictions'] as $prediction) {
             $design = $prediction['design'];

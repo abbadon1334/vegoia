@@ -148,6 +148,19 @@ def regression_section() -> dict:
             warnings.simplefilter("ignore")
             fit = sm.OLS(y, design).fit()
 
+        # Nothing from statsmodels is recorded for a rank-deficient design.
+        # Its fit there goes through a pseudo-inverse, and how the SVD treats a
+        # singular value that is effectively zero depends on the LAPACK build,
+        # so the numbers move between machines -- 309 of Filip's changed
+        # between two CI runners on identical software. They also go unread:
+        # the test skips those datasets precisely because a pseudo-inverse
+        # describes the fallback rather than the model. Writing them down would
+        # be storing irreproducible noise for nobody.
+        if entry["rank_deficient"]:
+            out[path.stem] = entry
+
+            continue
+
         entry["statsmodels"] = {
             "t_statistics": [float(v) for v in fit.tvalues],
             "p_values": [float(v) for v in fit.pvalues],

@@ -128,6 +128,15 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+          tools: composer:v2
+
+      - uses: ramsey/composer-install@v3
+
       # The committed fixtures, and the accuracy ceilings measured from
       # numpy, are the reference every numeric test is checked against. If
       # regenerating them from networkx, igraph and leidenalg does not
@@ -165,3 +174,13 @@ jobs:
 
       - name: The references must still give the same answers
         run: python3 tools/compare_fixtures.py "${RUNNER_TEMP}/fixtures-committed" resources/fixtures
+
+      # The check with teeth, and the reason the exemptions above are not
+      # loopholes. Whatever drifted -- a partition leidenalg found in a
+      # different random order, an accuracy ceiling that follows this runner's
+      # LAPACK rather than the machine the fixtures were committed from -- the
+      # library must still satisfy the references as regenerated here. That is
+      # a stronger question than whether the files came back identical, and
+      # unlike file equality it is a question about this library.
+      - name: The library must satisfy the references it just regenerated
+        run: vendor/bin/phpunit --colors=always

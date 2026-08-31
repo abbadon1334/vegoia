@@ -55,12 +55,22 @@ ABSOLUTE = 1e-12
 
 # The attainable files are different in kind: they hold accuracy ceilings in
 # digits, each one a measurement of somebody else's rounding error, so their
-# own last digits are the least stable numbers in the whole tree. A one-ULP
-# shift in numpy's answer moves a ceiling of 15.6 digits by a few tenths,
-# because at that level the error being measured is itself one or two ULP.
-# Half a digit is a factor of three in the error -- far above that noise, far
-# below the whole digits a real change in accuracy costs.
-DIGITS_TOLERANCE = 0.5
+# own last digits are the least stable numbers in the whole tree.
+#
+# They turned out to be machine-dependent too, and by more than expected.
+# Running the identical scipy 1.18.1 on the CI runner rather than here moved
+# four of them: Longley's residual standard deviation from 12.55 digits to
+# 14.24, Wampler3's from 13.92 to 14.94, Norris's coefficients from 13.33 down
+# to 12.69. numpy's least squares calls LAPACK, and LAPACK's blocking and
+# kernels follow the CPU, so what it can attain on a dataset follows the CPU
+# as well.
+#
+# 2.5 digits therefore, comfortably above the 1.69 measured across machines
+# and still far below the several orders of magnitude a genuinely worse
+# algorithm gives up. This is a guard against a ceiling collapsing, not a
+# reproducibility claim; the claim that matters is checked by running the
+# suite against the regenerated ceilings, which the CI job does next.
+DIGITS_TOLERANCE = 2.5
 
 # Past this, the measurement is at the noise floor of double precision and
 # says only "exact to the last bit". Two such measurements agree by being

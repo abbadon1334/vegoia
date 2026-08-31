@@ -40,32 +40,6 @@ final class AttainableAccuracy
      */
     public const float MARGIN = 0.5;
 
-    /**
-     * The one case that does not meet the standard bar, named rather than
-     * hidden behind a looser global threshold.
-     *
-     * Filip is a degree-10 polynomial with a condition number near 1.8e15 --
-     * NIST notes that many statistical packages cannot fit it at all. This
-     * implementation reaches 8.02 correct digits on the coefficients and 7.71
-     * on their standard errors, against numpy's 8.55 and 8.47, so it is a
-     * fraction of a digit short of an implementation calling LAPACK. Column
-     * equilibration, column pivoting and a doubled-precision refinement
-     * residual were each tried against it and each made it worse; what is
-     * left is LAPACK's blocked factorisation itself.
-     *
-     * Naming the dataset keeps every other assertion at the standard 0.5
-     * margin. A global allowance large enough to cover Filip would have let a
-     * real regression through anywhere else.
-     *
-     * @var array<string, array<string, float>>
-     */
-    private const array EXCEPTIONS = [
-        'Filip' => [
-            'coefficients' => 1.0,
-            'standardErrors' => 1.0,
-        ],
-    ];
-
     /** @var array<string, array<string, array<string, float|null>>> keyed by source file */
     private static array $ceilings = [];
 
@@ -80,7 +54,7 @@ final class AttainableAccuracy
     ): float {
         $measured = self::ceilings($source);
         $baseline = (float) Lre::DEFAULT_DIGITS;
-        $margin = self::EXCEPTIONS[$dataset][$statistic] ?? self::MARGIN;
+        $margin = self::MARGIN;
 
         // Deliberately not `??`: a null value here means "hit exactly", which
         // is the most interesting case, and `??` would silently treat it as a

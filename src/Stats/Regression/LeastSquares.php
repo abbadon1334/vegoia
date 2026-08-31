@@ -8,6 +8,8 @@ use function abs;
 use function array_fill;
 use function array_values;
 use function count;
+use function max;
+use function min;
 use function sqrt;
 
 use Vegoia\Exception\InvalidArgument;
@@ -134,10 +136,16 @@ final class LeastSquares
     /**
      * Fit y = B0 + B1*x + ... + Bd*x^d.
      *
-     * Kept separate because building the powers is where a polynomial fit
-     * usually goes wrong, and because the resulting design matrix is a
-     * Vandermonde -- notoriously ill-conditioned, and the reason this class
-     * decomposes rather than solving normal equations.
+     * The predictor is mapped onto [-1, 1] before being raised to powers, and
+     * the coefficients mapped back afterwards.
+     *
+     * A Vandermonde built from raw values is as ill-conditioned as the data is
+     * far from the origin and wide in range. On NIST's Filip -- degree 10 over
+     * x in [-8.8, -3.1] -- the condition number is 1.8e15 and barely eight
+     * digits survive; centred on the midpoint and scaled to unit half-range it
+     * is 2.9e3 and fourteen do. The change of variable is exact in real
+     * arithmetic, so this is conditioning rather than approximation, and it is
+     * what numpy.polynomial.Polynomial.fit does for the same reason.
      *
      * @param list<float> $x
      * @param list<float> $y
@@ -148,21 +156,140 @@ final class LeastSquares
             throw InvalidArgument::outOfRange('Polynomial degree', (float) $degree, 1.0, INF);
         }
 
+        if ($x === []) {
+            throw InvalidArgument::emptyDataset('a polynomial fit');
+        }
+
+        $low = min($x);
+        $high = max($x);
+        $shift = ($low + $high) / 2.0;
+        $scale = ($high - $low) / 2.0;
+
+        if ($scale === 0.0) {
+            // Every predictor identical: no polynomial is determined, and
+            // scaling by zero would yield NaN rather than say so.
+            throw InvalidArgument::malformedEdge(
+                'A polynomial fit needs predictors that vary; every x is ' . $low
+            );
+        }
+
         $predictors = [];
 
         foreach ($x as $value) {
             $row = [];
             $power = 1.0;
+            $t = ($value - $shift) / $scale;
 
             for ($k = 1; $k <= $degree; $k++) {
-                $power *= $value;
+                $power *= $t;
                 $row[] = $power;
             }
 
             $predictors[] = $row;
         }
 
-        return self::fit($predictors, $y, $withIntercept);
+        return self::inPowersOfX(
+            self::fit($predictors, $y, $withIntercept),
+            $shift,
+            $scale,
+            $withIntercept,
+        );
+    }
+
+    /**
+     * Map a fit in t = (x - shift) / scale back to powers of x.
+     *
+     * Expanding t^k by the binomial theorem is a triangular change of basis M,
+     * so the coefficients become M*c. The standard errors do not simply
+     * rescale: mixing coefficients mixes their uncertainties, so the whole
+     * covariance transforms as M*C*M' and the errors come off its diagonal.
+     * Rescaling the errors alone would understate them wherever the original
+     * coefficients are correlated -- which, after a shift, they always are.
+     */
+    private static function inPowersOfX(Fit $fit, float $shift, float $scale, bool $withIntercept): Fit
+    {
+        $parameters = $fit->parameters;
+
+        // Column j of the fit is the coefficient of t^(j + offset).
+        $offset = $withIntercept ? 0 : 1;
+
+        /** @var list<list<float>> $transform */
+        $transform = [];
+
+        for ($j = 0; $j < $parameters; $j++) {
+            $row = array_fill(0, $parameters, 0.0);
+            $powerJ = $j + $offset;
+
+            for ($k = $j; $k < $parameters; $k++) {
+                $powerK = $k + $offset;
+
+                $row[$k] = self::binomial($powerK, $powerJ)
+                    * (-$shift) ** ($powerK - $powerJ)
+                    / $scale ** $powerK;
+            }
+
+            /** @var list<float> $row */
+            $transform[] = $row;
+        }
+
+        $coefficients = [];
+        $errors = [];
+
+        for ($i = 0; $i < $parameters; $i++) {
+            $value = new CompensatedSum();
+
+            for ($k = 0; $k < $parameters; $k++) {
+                $value->add($transform[$i][$k] * $fit->coefficients[$k]);
+            }
+
+            $coefficients[] = $value->value();
+
+            // (M C M')[i][i], without forming the full product.
+            $variance = new CompensatedSum();
+
+            for ($a = 0; $a < $parameters; $a++) {
+                if ($transform[$i][$a] === 0.0) {
+                    continue;
+                }
+
+                for ($b = 0; $b < $parameters; $b++) {
+                    if ($transform[$i][$b] === 0.0) {
+                        continue;
+                    }
+
+                    $variance->add(
+                        $transform[$i][$a] * $fit->covariance[$a][$b] * $transform[$i][$b]
+                    );
+                }
+            }
+
+            $errors[] = sqrt(abs($variance->value()));
+        }
+
+        return new Fit(
+            $coefficients,
+            $errors,
+            $fit->residualStandardDeviation,
+            $fit->rSquared,
+            $fit->residualSumOfSquares,
+            $fit->observations,
+            $fit->parameters,
+            $fit->degreesOfFreedom,
+            $fit->hasIntercept,
+            $fit->covariance,
+        );
+    }
+
+    /** Exact for the small degrees a polynomial fit can meaningfully carry. */
+    private static function binomial(int $n, int $k): float
+    {
+        $result = 1.0;
+
+        for ($i = 0; $i < $k; $i++) {
+            $result = $result * ($n - $i) / ($i + 1);
+        }
+
+        return $result;
     }
 
     /**
@@ -239,9 +366,11 @@ final class LeastSquares
         $variance = $degreesOfFreedom > 0 ? $residualSumOfSquares / $degreesOfFreedom : 0.0;
         $sigma = sqrt(abs($variance));
 
+        $covariance = self::covariance($triangular, $columns, $variance);
+
         return new Fit(
             $coefficients,
-            self::standardErrors($triangular, $columns, $sigma),
+            self::standardErrorsFrom($covariance, $columns),
             $sigma,
             self::rSquared($response, $residualSumOfSquares, $withIntercept),
             $residualSumOfSquares,
@@ -249,6 +378,7 @@ final class LeastSquares
             $columns,
             $degreesOfFreedom,
             $withIntercept,
+            $covariance,
         );
     }
 
@@ -392,15 +522,21 @@ final class LeastSquares
     }
 
     /**
-     * se_i = sigma * ||row i of R^-1||.
+     * The coefficient covariance, sigma^2 (R^-1)(R^-1)'.
      *
-     * R is inverted column by column with back-substitution -- triangular, so
-     * exact up to rounding -- rather than by forming and inverting R'R.
+     * The whole matrix and not just its diagonal, because a change of variable
+     * -- as the polynomial fit performs -- mixes the coefficients, and the
+     * standard errors of the transformed coefficients depend on their
+     * covariances as well as their variances.
+     *
+     * R is inverted by back-substitution, which is exact up to rounding for a
+     * triangular matrix. Forming R'R and inverting that would square the
+     * condition number, undoing the reason QR was chosen.
      *
      * @param  list<float> $matrix contains R in its leading $columns rows
-     * @return list<float>
+     * @return list<list<float>>
      */
-    private static function standardErrors(array $matrix, int $columns, float $sigma): array
+    private static function covariance(array $matrix, int $columns, float $variance): array
     {
         /** @var list<list<float>> $inverse */
         $inverse = [];
@@ -422,16 +558,38 @@ final class LeastSquares
             }
         }
 
+        $covariance = [];
+
+        for ($i = 0; $i < $columns; $i++) {
+            $row = array_fill(0, $columns, 0.0);
+
+            for ($j = 0; $j < $columns; $j++) {
+                $sum = new CompensatedSum();
+
+                for ($k = 0; $k < $columns; $k++) {
+                    $sum->add($inverse[$i][$k] * $inverse[$j][$k]);
+                }
+
+                $row[$j] = abs($variance) * $sum->value();
+            }
+
+            /** @var list<float> $row array_fill over 0..columns-1 */
+            $covariance[] = $row;
+        }
+
+        return $covariance;
+    }
+
+    /**
+     * @param  list<list<float>> $covariance
+     * @return list<float>
+     */
+    private static function standardErrorsFrom(array $covariance, int $columns): array
+    {
         $errors = [];
 
         for ($i = 0; $i < $columns; $i++) {
-            $sum = new CompensatedSum();
-
-            for ($j = 0; $j < $columns; $j++) {
-                $sum->add($inverse[$i][$j] * $inverse[$i][$j]);
-            }
-
-            $errors[] = $sigma * sqrt($sum->value());
+            $errors[] = sqrt(abs($covariance[$i][$i]));
         }
 
         return $errors;

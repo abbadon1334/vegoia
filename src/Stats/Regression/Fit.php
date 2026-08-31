@@ -32,6 +32,18 @@ final readonly class Fit
         public int $parameters,
         public int $degreesOfFreedom,
         public bool $hasIntercept,
+        /**
+         * The full coefficient covariance, not only its diagonal.
+         *
+         * Needed whenever a linear combination of coefficients matters -- a
+         * prediction interval, or a change of variable such as the polynomial
+         * fit performs -- because those depend on the off-diagonal terms too.
+         * Rescaling the standard errors alone would understate them wherever
+         * the coefficients are correlated.
+         *
+         * @var list<list<float>>
+         */
+        public array $covariance = [],
     ) {
     }
 

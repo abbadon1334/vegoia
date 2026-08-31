@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
+use Vegoia\Exception\InvalidArgument;
 use Vegoia\Stats\Regression\Fit;
 use Vegoia\Stats\Regression\LeastSquares;
 use Vegoia\Tests\Support\AttainableAccuracy;
@@ -123,6 +124,84 @@ final class LinearRegressionTest extends TestCase
         self::assertEqualsWithDelta(1.0, $fit->rSquared, 1.0e-9);
         self::assertEqualsWithDelta(0.0, $fit->residualStandardDeviation, 1.0e-6);
         self::assertTrue(is_finite($fit->rSquared));
+    }
+
+    /**
+     * The domain mapping must be invisible from outside.
+     *
+     * A polynomial fit maps x onto [-1, 1] before raising it to powers, then
+     * maps the coefficients back. That is a conditioning device, not a change
+     * of model: the coefficients returned are those of the polynomial in x,
+     * and predictions are made at the original x. If the mapping ever leaked
+     * -- a coefficient left in t, an unscaled prediction -- this catches it
+     * without reference to any certified value.
+     */
+    public function test_the_domain_mapping_does_not_change_the_model(): void
+    {
+        // y = 2 - 3x + x^2, fitted far from the origin where the raw
+        // Vandermonde would be badly conditioned.
+        $x = [];
+        $y = [];
+
+        for ($i = 0; $i < 40; $i++) {
+            $value = 1000.0 + $i * 0.5;
+            $x[] = $value;
+            $y[] = 2.0 - 3.0 * $value + $value ** 2;
+        }
+
+        $fit = LeastSquares::polynomial($x, $y, degree: 2);
+
+        self::assertEqualsWithDelta(2.0, $fit->coefficients[0], 1.0e-3, 'intercept in x');
+        self::assertEqualsWithDelta(-3.0, $fit->coefficients[1], 1.0e-6, 'linear term in x');
+        self::assertEqualsWithDelta(1.0, $fit->coefficients[2], 1.0e-9, 'quadratic term in x');
+
+        // Predictions are made at the original scale.
+        self::assertEqualsWithDelta(
+            2.0 - 3.0 * 1005.0 + 1005.0 ** 2,
+            $fit->predict([1005.0, 1005.0 ** 2]),
+            1.0e-3,
+        );
+    }
+
+    public function test_a_polynomial_needs_predictors_that_vary(): void
+    {
+        $this->expectException(InvalidArgument::class);
+
+        LeastSquares::polynomial([3.0, 3.0, 3.0, 3.0], [1.0, 2.0, 3.0, 4.0], degree: 2);
+    }
+
+    /**
+     * The covariance is the whole matrix, and it is what makes the
+     * back-transformed standard errors right: a change of variable mixes
+     * coefficients, so their uncertainties mix too.
+     */
+    public function test_the_fit_carries_a_full_covariance_matrix(): void
+    {
+        $fit = self::fit(NistRegression::load('Longley'));
+
+        self::assertCount(7, $fit->covariance);
+
+        foreach ($fit->covariance as $row) {
+            self::assertCount(7, $row);
+        }
+
+        for ($i = 0; $i < 7; $i++) {
+            self::assertEqualsWithDelta(
+                $fit->standardErrors[$i] ** 2,
+                $fit->covariance[$i][$i],
+                abs($fit->covariance[$i][$i]) * 1.0e-9,
+                "variance of B{$i} must be its standard error squared",
+            );
+
+            for ($j = 0; $j < 7; $j++) {
+                self::assertEqualsWithDelta(
+                    $fit->covariance[$i][$j],
+                    $fit->covariance[$j][$i],
+                    abs($fit->covariance[$i][$j]) * 1.0e-9,
+                    'covariance must be symmetric',
+                );
+            }
+        }
     }
 
     public function test_it_reports_the_shape_of_the_problem_it_solved(): void

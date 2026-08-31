@@ -177,9 +177,9 @@ across datasets whose values span nine orders of magnitude. Run
 dataset        mean   stdDev     r(1)        dataset       p     coef   stdErr
 PiDigits      exact    15.21    14.87        Norris        2    14.12    13.89
 Lottery       15.18    15.71    14.99        Longley       7    11.68    14.08
-NumAcc1       exact    exact    exact        Wampler2      6    13.13    15.25
-NumAcc3       15.93     9.46    11.93        Wampler5      6     5.93    13.88
-NumAcc4       15.73     8.25    10.73        Filip        11     7.96     7.65
+NumAcc1       exact    exact    exact        Wampler2      6    13.14    14.54
+NumAcc3       15.93     9.46    11.93        Wampler5      6     7.80    14.42
+NumAcc4       15.73     8.25    10.73        Filip        11    13.75    13.89
 ```
 
 The regression figures were checked against LAPACK called directly from C, not
@@ -188,7 +188,7 @@ matter. Mean correct digits across the collection:
 
 | implementation                | mean digits |
 |-------------------------------|-------------|
-| **Vegoia**                    | **11.40**   |
+| **Vegoia**                    | **11.94**   |
 | numpy (via OpenBLAS)          | 10.93       |
 | OpenBLAS called from C        | 10.84       |
 | ATLAS LAPACK called from C    | 10.79       |
@@ -197,8 +197,13 @@ matter. Mean correct digits across the collection:
 There is no single "LAPACK accuracy" here to fall short of: ATLAS and OpenBLAS
 differ from each other by more than either differs from this code, and the SVD
 path -- the textbook advice for ill-conditioned problems -- is the worst of the
-lot. Against the OpenBLAS build numpy actually loads, this is ahead on 9 of the
-11 datasets and behind on one, Filip, whose condition number is 1.8e15.
+lot. Ahead of numpy on 18 of 22 certified quantities, behind on 2.
+
+Filip is the clearest case. A degree-10 fit over x in [-8.8, -3.1] gives a
+Vandermonde with condition number 1.8e15, and LAPACK gets 8.55 digits out of
+it. Mapping the predictor onto [-1, 1] first brings the condition number to
+2.9e3, and the same solver then returns 13.75 -- the change of variable is
+exact, so the extra five digits are conditioning rather than cleverness.
 
 The harness is in `tools/lapack/`, so the comparison can be re-run rather than
 taken on trust.

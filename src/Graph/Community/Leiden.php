@@ -196,11 +196,15 @@ final class Leiden
 
     public function partition(Graph $graph): Partition
     {
-        // One randomizer across all passes. Creating it per pass would restart
-        // the same stream from the same seed, so a second pass starting from
-        // an already-settled partition would replay the first one's decisions
-        // exactly and find nothing -- which is what happened when this was
-        // first written.
+        // One randomizer across all passes, so the stream continues rather
+        // than restarting.
+        //
+        // Measured, this is worth nothing: rebuilding it per pass changes
+        // results by about 0.0001 of modularity, in either direction. It
+        // mattered only in an earlier version that ignored the starting
+        // partition, where a restarted stream really did replay the first
+        // pass exactly. Kept because a continuing stream is the honest
+        // reading of one seeded run, not because it measurably helps.
         $randomizer = new Randomizer(new Xoshiro256StarStar($this->seed));
         $partition = null;
 

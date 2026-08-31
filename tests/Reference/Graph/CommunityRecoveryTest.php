@@ -224,6 +224,86 @@ final class CommunityRecoveryTest extends TestCase
     }
 
     /**
+     * A second pass must actually find something.
+     *
+     * Repeating the algorithm from where the last pass finished is worth
+     * 0.003 to 0.012 of modularity on these graphs. Without it this library
+     * sits consistently below leidenalg, whose default is likewise two
+     * passes -- the gap that prompted adding it was 0.001 to 0.008 across the
+     * SNAP collaboration graphs.
+     *
+     * @return iterable<string, array{string}>
+     */
+    public static function fixturesWhereRepeatingHelps(): iterable
+    {
+        // Established by measurement, not assumption: on most fixtures a
+        // single pass already reaches the optimum and a second correctly
+        // finds nothing.
+        foreach (['lfr_400_mu03', 'lfr_400_mu05', 'email_eu_core'] as $name) {
+            yield $name => [$name];
+        }
+    }
+
+    #[DataProvider('fixturesWhereRepeatingHelps')]
+    public function test_a_second_pass_improves_on_the_first(string $name): void
+    {
+        $graph = GraphFixture::labelled($name)->graph();
+        $objective = new Modularity();
+
+        $once = -INF;
+        $twice = -INF;
+
+        for ($seed = 1; $seed <= 5; $seed++) {
+            $once = max($once, $objective->of(
+                $graph,
+                new Leiden(new Modularity(), $seed, iterations: 1)->partition($graph),
+            ));
+            $twice = max($twice, $objective->of(
+                $graph,
+                new Leiden(new Modularity(), $seed, iterations: 2)->partition($graph),
+            ));
+        }
+
+        self::assertGreaterThan(
+            $once,
+            $twice,
+            sprintf(
+                '%s: two passes reached %.6f, one reached %.6f -- the second pass found nothing, '
+                . 'which happens when the random stream restarts instead of continuing',
+                $name,
+                $twice,
+                $once,
+            ),
+        );
+    }
+
+    /**
+     * The default is two passes, matching leidenalg.
+     *
+     * Asserted through the default constructor rather than an explicit
+     * `iterations:` argument -- every other test here passes the count
+     * explicitly, so a change to the default would slip through all of them.
+     */
+    public function test_the_default_runs_two_passes(): void
+    {
+        $graph = GraphFixture::labelled('lfr_400_mu03')->graph();
+        $objective = new Modularity();
+
+        $default = -INF;
+        $single = -INF;
+
+        for ($seed = 1; $seed <= 5; $seed++) {
+            $default = max($default, $objective->of($graph, Leiden::modularity(seed: $seed)->partition($graph)));
+            $single = max($single, $objective->of(
+                $graph,
+                new Leiden(new Modularity(), $seed, iterations: 1)->partition($graph),
+            ));
+        }
+
+        self::assertGreaterThan($single, $default, 'the default must do more than one pass');
+    }
+
+    /**
      * The ground truth of a real network is not the modularity optimum, and
      * pretending otherwise is a standard mistake. On email-Eu-core the
      * departments people belong to score *worse* by modularity than what the

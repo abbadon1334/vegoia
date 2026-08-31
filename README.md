@@ -175,11 +175,11 @@ across datasets whose values span nine orders of magnitude. Run
 
 ```
 dataset        mean   stdDev     r(1)        dataset       p     coef   stdErr
-PiDigits      exact    15.21    14.87        Norris        2    14.35    13.80
-Lottery       15.18    15.71    14.99        Longley       7    11.21    12.49
-NumAcc1       exact    exact    exact        Wampler2      6    13.40    14.58
-NumAcc3       15.93     9.46    11.93        Wampler5      6     6.43    13.31
-NumAcc4       15.73     8.25    10.73        Filip        11     8.02     7.71
+PiDigits      exact    15.21    14.87        Norris        2    14.12    13.89
+Lottery       15.18    15.71    14.99        Longley       7    11.68    14.08
+NumAcc1       exact    exact    exact        Wampler2      6    13.13    15.25
+NumAcc3       15.93     9.46    11.93        Wampler5      6     5.93    13.88
+NumAcc4       15.73     8.25    10.73        Filip        11     7.96     7.65
 ```
 
 Across the linear least squares collection this comes out about half a digit

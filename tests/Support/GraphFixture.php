@@ -196,6 +196,29 @@ final readonly class GraphFixture
         return $expected['leiden']['modularity_objective']['modularity'];
     }
 
+    /**
+     * The CPM bands, keyed by the resolution they were measured at.
+     *
+     * Each records what leidenalg's CPM produced over fifty seeds: the
+     * modularity of the partitions it found, and how many communities. The
+     * modularity is incidental there rather than the objective, which is why
+     * the test that reads this asks less of it than the modularity envelope
+     * does.
+     *
+     * @return array<string, array{
+     *     modularity: array{min: float, max: float, mean: float, stdev: float},
+     *     communities: array{min: int, max: int},
+     *     seeds: int
+     * }>
+     */
+    public function leidenConstantPottsBands(): array
+    {
+        /** @var array{leiden: array{cpm: array<string, array{modularity: array{min: float, max: float, mean: float, stdev: float}, communities: array{min: int, max: int}, seeds: int}>}} $expected */
+        $expected = $this->expected;
+
+        return $expected['leiden']['cpm'];
+    }
+
     /** @return array{min: int, max: int} */
     public function leidenCommunityCount(): array
     {

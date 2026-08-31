@@ -135,7 +135,7 @@ final class LeidenTest extends TestCase
     }
 
     #[DataProvider('fixtures')]
-    public function test_modularity_lands_inside_the_envelope_measured_from_leidenalg(string $name): void
+    public function test_it_reaches_the_best_modularity_leidenalg_reaches(string $name): void
     {
         $fixture = GraphFixture::load($name);
         $graph = $fixture->graph();
@@ -148,17 +148,27 @@ final class LeidenTest extends TestCase
             $best = max($best, $q);
         }
 
-        // A different RNG explores in a different order, so require reaching
-        // the bottom of the reference band rather than reproducing it.
+        // Best against best. This asked for the bottom of the reference band
+        // until leidenalg 0.12 made the point that the bottom is the wrong
+        // bar: its worst seed on the 4x4 grid fell from 0.4167 to 0.3333
+        // between releases, which would have silently relaxed this assertion
+        // by a fifth. The top of the band did not move on any fixture -- an
+        // optimum is a property of the graph, while a worst case is a property
+        // of one library's random order -- so comparing best to best is both
+        // the stricter test and the stable one.
+        //
+        // Measured, not hoped for: this implementation reaches leidenalg's
+        // best on all eleven fixtures, and does it in ten seeds against the
+        // reference's fifty.
         self::assertGreaterThanOrEqual(
-            $envelope['min'] - 1.0e-9,
+            $envelope['max'] - 1.0e-9,
             $best,
             sprintf(
-                "%s: best modularity over 10 seeds was %.9f, below leidenalg's worst of %.9f "
+                "%s: best modularity over 10 seeds was %.9f, short of leidenalg's best of %.9f "
                 . '(reference band [%.9f, %.9f])',
                 $name,
                 $best,
-                $envelope['min'],
+                $envelope['max'],
                 $envelope['min'],
                 $envelope['max'],
             ),

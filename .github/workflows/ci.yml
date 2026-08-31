@@ -153,10 +153,10 @@ jobs:
       # doing its job: it exists to notice when a reference library changes
       # its answer, and a pin hides exactly that.
       - name: Install the reference stack
-        run: pip install numpy scipy scikit-learn networkx python-igraph leidenalg
+        run: pip install numpy scipy scikit-learn networkx python-igraph leidenalg mpmath
 
       - name: Record which versions produced this run
-        run: pip list --format=freeze | grep -E '^(numpy|scipy|scikit-learn|networkx|igraph|leidenalg)='
+        run: pip list --format=freeze | grep -E '^(numpy|scipy|scikit-learn|networkx|igraph|leidenalg|mpmath)='
 
       - name: Keep the committed fixtures to compare against
         run: cp -r resources/fixtures "${RUNNER_TEMP}/fixtures-committed"
@@ -171,6 +171,7 @@ jobs:
           python3 tools/generate_nist_attainable.py
           python3 tools/generate_lls_attainable.py
           python3 tools/generate_anova_attainable.py
+          python3 tools/generate_special_function_fixtures.py
 
       - name: The references must still give the same answers
         run: python3 tools/compare_fixtures.py "${RUNNER_TEMP}/fixtures-committed" resources/fixtures

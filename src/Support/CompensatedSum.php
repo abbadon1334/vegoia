@@ -53,6 +53,24 @@ final class CompensatedSum
     }
 
     /**
+     * exp() of the accumulated total, without collapsing it first.
+     *
+     * The same reasoning as dividedBy(). A logarithm around -673, which is
+     * what the tail of the error function needs, has an ulp of 1.1e-13, so
+     * folding the compensation into it before exponentiating throws away
+     * three digits of the answer -- measured, erfc(26) came out to 12.81
+     * digits that way against SciPy's 15.35, and the reference test failed.
+     *
+     * exp(a + b) = exp(a) exp(b) exactly, and here b is the compensation:
+     * small enough that exp(b) is computed to full relative accuracy, so the
+     * product recovers what the collapse would have discarded.
+     */
+    public function exponentiated(): float
+    {
+        return exp($this->sum) * exp($this->compensation);
+    }
+
+    /**
      * Divide the accumulated total, keeping the compensation through the
      * division.
      *

@@ -62,6 +62,7 @@ use Vegoia\Stats\Descriptive;
 use Vegoia\Stats\OneWayAnova;
 use Vegoia\Stats\Precision;
 use Vegoia\Stats\Regression\LeastSquares;
+use Vegoia\Stats\SpecialFunction;
 
 // A deterministic graph big enough for the JIT to warm up and trace.
 $randomizer = new Randomizer(new Xoshiro256StarStar(7));
@@ -150,6 +151,27 @@ echo md5(json_encode([
     'coefficients' => $g($fit->coefficients),
     'standard_errors' => $g($fit->standardErrors),
     'r_squared' => $n($fit->rSquared),
+    // special functions: series and continued fractions with data-dependent
+    // termination, which is exactly the shape the JIT compiles aggressively
+    'log_gamma' => $g(array_map(SpecialFunction::logGamma(...), [0.5, 1.5, 7.0, 100.0, 1.0e6])),
+    'erf' => $g(array_map(SpecialFunction::erf(...), [-3.0, -0.5, 0.25, 1.0, 3.0])),
+    'erfc' => $g(array_map(SpecialFunction::erfc(...), [0.5, 2.0, 6.0, 15.0, 26.0])),
+    'gamma_p' => $g([
+        SpecialFunction::regularizedGammaP(0.5, 0.25),
+        SpecialFunction::regularizedGammaP(5.0, 5.0),
+        SpecialFunction::regularizedGammaP(1000.0, 900.0),
+    ]),
+    'gamma_q' => $g([
+        SpecialFunction::regularizedGammaQ(0.5, 1.0),
+        SpecialFunction::regularizedGammaQ(20.0, 40.0),
+        SpecialFunction::regularizedGammaQ(1000.0, 2000.0),
+    ]),
+    'beta' => $g([
+        SpecialFunction::regularizedBeta(0.5, 0.5, 0.5),
+        SpecialFunction::regularizedBeta(0.25, 2.0, 3.0),
+        SpecialFunction::regularizedBeta(0.9, 100.0, 100.0),
+        SpecialFunction::regularizedBeta(1.0e-6, 50.0, 5.0),
+    ]),
     // retrieval
     'cosine' => $n(Similarity::cosine(array_slice($x, 0, 64), array_slice($y, 0, 64))),
     'knn' => array_keys(NearestNeighbours::cosine(

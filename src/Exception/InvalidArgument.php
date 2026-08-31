@@ -50,4 +50,10 @@ final class InvalidArgument extends InvalidArgumentException implements VegoiaEx
     {
         return new self("{$what} must lie in [{$low}, {$high}], {$given} given.");
     }
+
+    /** A special function asked for a value outside the region where it is defined. */
+    public static function outOfDomain(string $what, float $given, string $requirement): self
+    {
+        return new self("{$what} is undefined for {$given}: {$requirement}.");
+    }
 }

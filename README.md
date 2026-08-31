@@ -84,6 +84,22 @@ thing at every scale:
 Leiden::constantPotts(resolution: 0.05, seed: 42)->partition($graph);
 ```
 
+### A second opinion on the same graph
+
+```php
+use Vegoia\Graph\Community\LabelPropagation;
+
+// No objective function, no resolution, linear in the number of edges. It
+// finds the groups that agree with themselves rather than the groups that
+// maximise something -- so when it and Leiden disagree, that is information.
+new LabelPropagation(seed: 0)->partition($graph);
+```
+
+It is unstable by nature: nothing is being maximised, so no run is better than
+another, and on a graph without clear structure it will collapse everything
+into one community or leave everything apart. Use it on large graphs with real
+structure, or as a cross-check. Use Leiden when the answer matters.
+
 ### Statistics
 
 ```php
@@ -105,6 +121,64 @@ $fit->predict([1.5, 2.0]);
 LeastSquares::polynomial($x, $y, degree: 10);   // Householder QR; this actually works
 ```
 
+### Saying what a statistic means
+
+A statistic on its own is not a result. An F of 21.0 is p = 2.6e-22 on (8, 180)
+degrees of freedom and p = 0.35 on (4, 20), and only one of those is worth
+reporting.
+
+```php
+use Vegoia\Stats\OneWayAnova;
+
+$anova = OneWayAnova::of([$controlGroup, $treatmentA, $treatmentB]);
+$anova->fStatistic;
+$anova->pValue();          // the upper tail, computed directly
+
+$fit = LeastSquares::fit($predictors, $response);
+$fit->tStatistic(1);
+$fit->pValue(1);                             // two-sided, against a null of zero
+$fit->confidenceInterval(1, level: 0.99);
+$fit->fStatistic();                          // every slope at once
+$fit->overallPValue();
+
+$fit->meanResponseInterval([1.5, 2.0]);      // where the fitted line is
+$fit->predictionInterval([1.5, 2.0]);        // where the next observation is
+```
+
+The last two are different questions and the second interval is always wider:
+the mean carries only the uncertainty of where the line is, while a single new
+observation also has to scatter around it — and that part does not shrink as
+the sample grows.
+
+### Distributions, and the functions under them
+
+```php
+use Vegoia\Stats\Distribution\{Normal, StudentT, ChiSquared, FisherSnedecor};
+use Vegoia\Stats\SpecialFunction;
+
+$normal = new Normal();
+$normal->survival(10.0);        // 7.6e-24, not the 0.0 that 1 - cdf(10) gives
+$normal->upperQuantile(1e-300); // 37.05
+
+new StudentT(30.0)->survival(2.75);
+new ChiSquared(3.0)->upperQuantile(0.05);
+new FisherSnedecor(3.0, 10.0)->survival(5.0);
+
+SpecialFunction::erfc(26.0);                       // 5.66e-296
+SpecialFunction::regularizedBeta(0.4, 2.0, 3.0);
+SpecialFunction::regularizedGammaQ(1000.0, 2000.0);
+```
+
+Both tails are first-class throughout, in the interface and in every
+implementation. A p-value *is* a tail probability, and past about four standard
+deviations the upper tail cannot be recovered from the lower one: at z = 10 the
+cumulative is 1 to every bit a double has, so `1 - cumulative(10)` is exactly
+zero. Reporting p = 0 there is not a rounding error, it is a different claim.
+
+PHP ships none of erf, erfc, lgamma or the incomplete gamma and beta, in the
+language or in any extension one can expect to find, which is the concrete
+reason a PHP program could not turn an F into a p-value without shelling out.
+
 ### Centrality and paths
 
 ```php
@@ -121,6 +195,72 @@ Dijkstra::shortestPath($graph, from: 0, to: 42);
 
 Connectivity::components($graph);
 Connectivity::inducesConnectedSubgraph($graph, [3, 7, 9]);
+```
+
+### Where a graph is fragile
+
+```php
+use Vegoia\Graph\Connectivity;
+
+Connectivity::bridges($graph);              // edges whose removal disconnects
+Connectivity::articulationPoints($graph);   // nodes whose removal disconnects
+
+Connectivity::stronglyConnectedComponents($directed);   // Tarjan, iterative
+Connectivity::isAcyclic($directed);
+```
+
+For a knowledge graph assembled by extraction, a bridge is a single stated
+relation carrying an entire region of the answer: if that one extraction was
+wrong, everything beyond it is unreachable and nothing else says so. It is the
+edge worth showing a human.
+
+On a directed graph, connectivity splits in two. Weak connectivity ignores the
+arrows and asks whether the drawing is in one piece; strong connectivity
+respects them and asks whether everything can reach everything. Only the second
+is an equivalence relation, and only the second says whether a citation graph
+has real cycles or merely looks like it.
+
+### Which edges are probably missing
+
+```php
+use Vegoia\Graph\{LinkPrediction, LinkMeasure};
+
+LinkPrediction::score($graph, $a, $b, LinkMeasure::AdamicAdar);
+
+// The entry point a retrieval system wants: what should this node be joined
+// to? Candidates come from two hops away, not from every pair in the graph.
+LinkPrediction::rank($graph, $node, LinkMeasure::Jaccard, limit: 10);
+```
+
+Five measures, and they disagree on purpose — choosing between them is
+choosing what you think an edge means. Common neighbours counts and is biased
+towards hubs. Jaccard divides by the union, so it asks what proportion of the
+pair's world is shared. Adamic-Adar and resource allocation weight each shared
+neighbour by how unusual it is, because sharing a neighbour everybody has says
+little. Preferential attachment ignores shared neighbours entirely and says
+only that busy nodes get busier — true of citation graphs, false of most
+others.
+
+### Bringing in a graph you already have
+
+```php
+use Vegoia\Interop\{LabelledGraph, Graphp};
+
+// Names in, names out. Nodes are numbered by first appearance, so the same
+// input numbers the same way every time.
+$g = LabelledGraph::fromAdjacency(['alice' => ['bob', 'carol'], 'dave' => []]);
+$g = LabelledGraph::fromEdges([['alice', 'bob', 0.9]], nodes: ['dave']);
+$g = LabelledGraph::fromMatrix($matrix, ['alice', 'bob', 'carol']);
+
+$g->communities(Leiden::modularity(seed: 1)->partition($g->graph));
+// [['alice', 'bob', 'carol'], ['dave']]
+
+$g->named(new PageRank()->of($g->graph));
+// ['alice' => 0.31, 'bob' => 0.31, ...]
+
+// Already using graphp/graph? Keep it for building and editing, hand it here
+// for measuring. It is a dev dependency and stays one.
+$g = Graphp::import($existingGraph);
 ```
 
 ### Retrieval
@@ -142,20 +282,39 @@ MaximalMarginalRelevance::select($query, $corpus, k: 5, lambda: 0.7);
 ```
 src/
 ├── Graph/
-│   ├── Graph.php            immutable, compressed sparse row
-│   ├── Partition.php        canonical community labelling
-│   ├── Connectivity.php     components, induced-subgraph connectivity
+│   ├── Graph.php              immutable, compressed sparse row
+│   ├── Partition.php          canonical community labelling
+│   ├── NodeIndex.php          your identifiers <-> the kernel's integers
+│   ├── Connectivity.php       components, strong components, bridges,
+│   │                          articulation points, induced connectivity
+│   ├── Clustering.php         triangles, local coefficient, transitivity
+│   ├── KCore.php              core numbers and k-core subgraphs
+│   ├── LinkPrediction.php     five measures for the edges that are missing
 │   ├── Community/
-│   │   ├── Leiden.php       local moving → refinement → aggregation
-│   │   └── Quality/         Modularity, ConstantPotts
-│   ├── Centrality/          PageRank, Betweenness, Closeness
-│   └── Path/                BreadthFirst, Dijkstra
+│   │   ├── Leiden.php         local moving → refinement → aggregation
+│   │   ├── LabelPropagation.php   linear time, no objective function
+│   │   ├── Agreement.php      NMI, adjusted Rand, variation of information
+│   │   └── Quality/           Modularity, ConstantPotts, ErdosRenyiPotts,
+│   │                          Surprise, Significance
+│   ├── Centrality/            PageRank (personalised too), Betweenness,
+│   │                          Closeness, Harmonic, Katz, Eigenvector, HITS
+│   └── Path/                  BreadthFirst, Dijkstra
 ├── Stats/
-│   ├── Descriptive.php      Chan-Golub-LeVeque corrected two-pass
-│   └── Regression/          Householder QR least squares
-├── Rag/                     Similarity, NearestNeighbours, MMR
+│   ├── Descriptive.php        Chan-Golub-LeVeque corrected two-pass
+│   ├── Correlation.php        Pearson, Spearman, Kendall tau-b
+│   ├── OneWayAnova.php        with the p-value that makes F readable
+│   ├── SpecialFunction.php    erf, erfc, lgamma, incomplete gamma and beta
+│   ├── Distribution/          Normal, StudentT, ChiSquared, FisherSnedecor
+│   │                          — both tails, and quantiles against either
+│   └── Regression/            Householder QR least squares, t and p per
+│                              coefficient, confidence and prediction intervals
+├── Rag/                       Similarity, NearestNeighbours, MMR
+├── Interop/
+│   ├── LabelledGraph.php      edge lists, adjacency maps, matrices
+│   └── Graphp.php             adapter for graphp/graph (dev dependency)
 └── Support/
-    └── CompensatedSum.php   Neumaier summation
+    ├── CompensatedSum.php     Neumaier summation
+    └── ExactProduct.php       Dekker two-product
 ```
 
 ## How it is tested
@@ -209,6 +368,53 @@ exact, so the extra five digits are conditioning rather than cleverness.
 
 The harness is in `tools/lapack/`, so the comparison can be re-run rather than
 taken on trust.
+
+**Everything else follows the same shape: a certified value, and a measured
+ceiling.** Comparing one implementation with another and calling agreement
+correctness cannot say which of the two is wrong, so wherever NIST does not
+certify an answer, mpmath at 50 digits provides one and SciPy's distance from
+it becomes the bar.
+
+| what | certified by | ceiling measured from |
+|------|--------------|-----------------------|
+| descriptive statistics, regression | NIST StRD | numpy, and LAPACK from C |
+| special functions, distributions | mpmath, 50 digits | SciPy |
+| p-values, confidence intervals | NIST certified coefficients | statsmodels |
+| communities, centralities, paths | — | igraph, leidenalg, networkx |
+| link prediction, bridges, components | — | networkx |
+
+The bar is the reference's accuracy less half a digit, and *beating* it has to
+pass rather than fail. That distinction earned its keep: at the first row of
+Wampler5 the true fitted value is exactly 1, statsmodels returns 1.0000011,
+this library returns 1.0000000014, and a test written the obvious way would
+have failed it for being three digits closer to the truth.
+
+Where the reference is stochastic — Leiden, label propagation — the fixture
+records a spread over fifty seeds rather than an answer, because no run is
+reproducible across implementations and pretending otherwise would pin
+somebody's random number stream.
+
+**Mutation testing, not just coverage.** Coverage says which lines ran, which
+is a weaker question than it looks. Infection changes one operator or constant
+at a time and reruns the suite; a surviving mutant is a change to the library
+that no assertion objects to. The gate is 83% covered MSI at 100% mutation
+coverage, and the number is measured rather than aspired to.
+
+It has earned its place. It found `Correlation::pearson` returning 0.596 where
+the answer was 0.965 on an array whose keys were not 0..n-1; a normalisation
+step in `Descriptive` that could not do anything and was deleted; and a
+contract test of mine that asserted only the exception class, so deleting a
+guard entirely still raised the same class from three frames further down and
+the whole suite passed.
+
+**The JIT is checked, and the check is checked.** `tools/jit_check.php` runs
+every public entry point twice, once interpreted and once under the tracing
+JIT, and compares. This is not paranoia: on PHP 8.5.10 a Generator used to walk
+the edges counted 105 edges on a 78-edge graph under the JIT, which made
+`Surprise` return 47.18 where the answer is 37.62. The hot paths walk the CSR
+arrays for that reason. The guard also verifies that the JIT actually turned
+on — installing pcov silently disables it, and for a while the check was
+comparing the interpreter against itself and reporting that they agreed.
 
 ### How these compare to what the reference libraries demand
 
@@ -399,13 +605,25 @@ above a genuinely unrelated document.
 ## Regenerating fixtures
 
 Only needed when adding graphs or datasets. Requires `python-igraph`,
-`leidenalg`, `networkx`, `numpy`.
+`leidenalg`, `networkx`, `numpy`, `scipy`, `mpmath`, `statsmodels`.
 
 ```
-python3 tools/generate_graph_fixtures.py    # golden graph fixtures
-python3 tools/generate_nist_attainable.py   # float64 accuracy ceilings
-python3 tools/generate_lls_attainable.py    # ditto, for regression
+python3 tools/generate_graph_fixtures.py              # golden graph fixtures
+python3 tools/generate_structure_fixtures.py          # components, bridges, cut vertices
+python3 tools/generate_link_prediction_fixtures.py    # five measures, every pair
+python3 tools/generate_label_propagation_fixtures.py  # the spread over fifty seeds
+python3 tools/generate_special_function_fixtures.py   # erf, lgamma, incomplete gamma/beta
+python3 tools/generate_distribution_fixtures.py       # both tails and the quantiles
+python3 tools/generate_inference_fixtures.py          # p-values and intervals
+python3 tools/generate_nist_attainable.py             # float64 accuracy ceilings
+python3 tools/generate_lls_attainable.py              # ditto, for regression
 ```
+
+CI regenerates all of them on every push and then runs the suite against what
+came out, which is a stronger question than whether the files came back
+identical — they cannot, since numpy's summation order and leidenalg's random
+stream both follow the machine. `tools/compare_fixtures.py` holds the
+deterministic values to 1e-12 and reports the rest.
 
 NIST source data lives in `resources/fixtures/nist/` and comes from
 <https://www.itl.nist.gov/div898/strd/>.
@@ -426,6 +644,21 @@ NIST source data lives in `resources/fixtures/nist/` and comes from
   sample variance.* The American Statistician 37(3), 242–247.
 - J. Carbonell & J. Goldstein (1998). *The use of MMR, diversity-based reranking.*
   SIGIR '98, 335–336.
+- U.N. Raghavan, R. Albert & S. Kumara (2007). *Near linear time algorithm to
+  detect community structures in large-scale networks.* Physical Review E 76,
+  036106.
+- R. Tarjan (1972). *Depth-first search and linear graph algorithms.* SIAM
+  Journal on Computing 1(2), 146–160.
+- J. Hopcroft & R. Tarjan (1973). *Algorithm 447: efficient algorithms for
+  graph manipulation.* Communications of the ACM 16(6), 372–378.
+- L.A. Adamic & E. Adar (2003). *Friends and neighbors on the web.* Social
+  Networks 25(3), 211–230.
+- T. Zhou, L. Lü & Y.-C. Zhang (2009). *Predicting missing links via local
+  information.* The European Physical Journal B 71, 623–630.
+- M.J. Wichura (1988). *Algorithm AS 241: the percentage points of the normal
+  distribution.* Applied Statistics 37(3), 477–484.
+- C. Lanczos (1964). *A precision approximation of the gamma function.* SIAM
+  Journal on Numerical Analysis 1(1), 86–96.
 
 ## Licence
 

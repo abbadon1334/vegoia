@@ -39,3 +39,18 @@ print(glob.glob(str(pathlib.Path(numpy.__file__).parent.parent) + "/**/*openblas
 
 Both read `m n`, then the design matrix row-major, then the response, and print
 the coefficients.
+
+## What is not here: igraph's C library
+
+`libigraph.so.3` is installed and exports everything needed, but calling it
+from C with hand-declared prototypes did not work: igraph 0.10 widened
+`igraph_integer_t` to 64 bits and reshaped several structs, so a guessed layout
+segfaults rather than misbehaving visibly. Getting it right needs the headers,
+which means installing `libigraph-dev`.
+
+It would have added little. python-igraph is a thin binding, and the graph
+operations here run for milliseconds to seconds -- long enough that the cost of
+crossing into Python is a small fraction of the total, unlike the least squares
+calls where the work is microseconds and the overhead would dominate. The
+Python-side igraph timings are used for graphs; the C oracles are used for the
+statistics, where the difference matters.

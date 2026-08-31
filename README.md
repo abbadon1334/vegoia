@@ -311,6 +311,34 @@ Honesty requires the next number too: igraph also ships a natively tuned
 of Vegoia with the JIT. That is what a C extension could still chase; nothing a
 subprocess architecture can reach.
 
+### Statistics, against Python and C
+
+The graph timings above are the ones that decide whether this library is
+usable. The statistical kernels are smaller and the picture is different:
+
+| operation                    | Vegoia + JIT | numpy / scipy | ratio  |
+|------------------------------|--------------|---------------|--------|
+| ANOVA, 1809 observations     | **0.026 ms** | 0.469 ms      | 0.06x  |
+| Pearson, 5000 pairs          | 0.699 ms     | 0.198 ms      | 3.5x   |
+| least squares, Filip (82x11) | 0.422 ms     | 0.024 ms      | 18x    |
+| lag-1 autocorrelation, 5000  | 1.019 ms     | 0.024 ms      | 43x    |
+
+Where the work is a single pass over a few thousand values, numpy's vectorised
+inner loops win by one to two orders of magnitude, and no amount of PHP is
+going to change that. Where the work has structure numpy has no primitive for
+-- one-way ANOVA is grouping plus two passes -- scipy pays for its generality
+and this is sixteen times faster.
+
+The autocorrelation is the clearest trade: it is the slowest ratio here
+precisely because it computes exact products, which is what buys the five extra
+digits over a plain implementation. Accuracy was chosen over speed knowingly,
+in a routine that runs once per series rather than in a loop.
+
+Reaching a C library from outside costs more than either: the GSL harness in
+`tools/lapack/` takes 1.3-1.6 ms for the same calls, nearly all of it process
+spawn. Below a millisecond of actual work, staying in-process wins whatever the
+language.
+
 Other operations at 100 000 nodes, with the JIT: PageRank 220 ms (igraph
 385 ms), Dijkstra 51 ms (igraph 20 ms), graph construction 306 ms (igraph
 49 ms). Betweenness is O(nm) -- 166 ms at 1 000 nodes and practical to a few

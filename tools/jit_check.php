@@ -51,6 +51,8 @@ use Vegoia\Graph\Community\Quality\Surprise;
 use Vegoia\Graph\Connectivity;
 use Vegoia\Graph\Graph;
 use Vegoia\Graph\KCore;
+use Vegoia\Graph\LinkMeasure;
+use Vegoia\Graph\LinkPrediction;
 use Vegoia\Graph\Partition;
 use Vegoia\Graph\Path\BreadthFirst;
 use Vegoia\Graph\Path\Dijkstra;
@@ -140,6 +142,19 @@ echo md5(json_encode([
     'components' => Connectivity::components($graph)->membership(),
     'bfs' => $g(BreadthFirst::distancesFrom($graph, 0)),
     'dijkstra' => $g(Dijkstra::distancesFrom($graph, 0)),
+    // link prediction: a sorted merge of two neighbour runs, and a two-hop
+    // candidate walk, both of which the JIT compiles eagerly
+    'link_scores' => $g([
+        LinkPrediction::score($graph, 0, 2, LinkMeasure::Jaccard),
+        LinkPrediction::score($graph, 0, 2, LinkMeasure::AdamicAdar),
+        LinkPrediction::score($graph, 0, 2, LinkMeasure::ResourceAllocation),
+        LinkPrediction::score($graph, 0, 2, LinkMeasure::CommonNeighbours),
+        LinkPrediction::score($graph, 0, 2, LinkMeasure::PreferentialAttachment),
+    ]),
+    'link_rank' => array_map(
+        static fn (float $v): string => sprintf('%.17g', $v),
+        LinkPrediction::rank($graph, 0, LinkMeasure::AdamicAdar, 5),
+    ),
     // statistics, in both precisions
     'stdDev' => $n($stats->stdDev()),
     'mean' => $n($stats->mean()),

@@ -252,7 +252,12 @@ final class Leiden
         // separately; the undirected one runs happily on directed input and
         // returns a partition that looks reasonable and means nothing.
         if ($graph->isDirected()) {
-            throw InvalidArgument::directedNotSupported('Leiden community detection');
+            throw InvalidArgument::directedNotSupported(
+                'Leiden community detection',
+                'Directed modularity (Leicht-Newman) is a different formula and is not '
+                . 'implemented; running the undirected one on a directed graph would return '
+                . 'a plausible wrong answer.',
+            );
         }
 
         $order = $graph->order();

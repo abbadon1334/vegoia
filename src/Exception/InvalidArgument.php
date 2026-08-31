@@ -37,13 +37,13 @@ final class InvalidArgument extends InvalidArgumentException implements VegoiaEx
         return new self("Malformed edge: {$detail}");
     }
 
-    public static function directedNotSupported(string $operation): self
+    /**
+     * @param string $because what the directed case would need instead, so the
+     *                        message says why rather than only that
+     */
+    public static function directedNotSupported(string $operation, string $because): self
     {
-        return new self(
-            "{$operation} is defined for undirected graphs only. Directed modularity "
-            . '(Leicht-Newman) is a different formula and is not implemented; running the '
-            . 'undirected one on a directed graph would return a plausible wrong answer.'
-        );
+        return new self("{$operation} is defined for undirected graphs only. {$because}");
     }
 
     public static function outOfRange(string $what, float $given, float $low, float $high): self

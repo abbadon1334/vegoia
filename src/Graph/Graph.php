@@ -109,6 +109,12 @@ final class Graph
         return $this->weighted;
     }
 
+    /** Whether an index names a node of this graph. */
+    public function hasNode(int $node): bool
+    {
+        return $node >= 0 && $node < $this->order;
+    }
+
     public function isEmpty(): bool
     {
         return $this->order === 0;

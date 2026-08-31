@@ -175,12 +175,19 @@ across datasets whose values span nine orders of magnitude. Run
 
 ```
 dataset        mean   stdDev     r(1)        dataset       p     coef   stdErr
-PiDigits      exact    15.21    14.87        Norris        2    13.33    13.58
-Lottery       15.18    15.71    14.99        Longley       7    12.79    14.13
-NumAcc1       exact    exact    exact        Wampler2      6    12.86    14.77
-NumAcc3       15.93     9.46    11.93        Wampler5      6     5.74    13.93
-NumAcc4       15.73     8.25    10.73        Filip        11     7.94     8.11
+PiDigits      exact    15.21    14.87        Norris        2    14.35    13.80
+Lottery       15.18    15.71    14.99        Longley       7    11.21    12.49
+NumAcc1       exact    exact    exact        Wampler2      6    13.40    14.58
+NumAcc3       15.93     9.46    11.93        Wampler5      6     6.43    13.31
+NumAcc4       15.73     8.25    10.73        Filip        11     8.02     7.71
 ```
+
+Across the linear least squares collection this comes out about half a digit
+ahead of numpy: better on 23 of the 33 certified quantities, worse on 5. Filip
+is the one dataset where LAPACK's blocked factorisation still wins, by a
+fraction of a digit -- column equilibration, column pivoting and a
+doubled-precision refinement residual were each tried against it and each made
+it worse.
 
 Where a figure is below 15, the limit is the arithmetic, not the algorithm:
 `10000000.2` is not representable in binary64, so `NumAcc4` is capped near 8

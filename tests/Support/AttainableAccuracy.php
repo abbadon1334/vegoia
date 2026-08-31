@@ -41,19 +41,30 @@ final class AttainableAccuracy
     public const float MARGIN = 0.5;
 
     /**
-     * Matrix decompositions need more slack than a running sum, and a higher
-     * bar makes no sense for them either.
+     * The one case that does not meet the standard bar, named rather than
+     * hidden behind a looser global threshold.
      *
-     * LAPACK's QR is blocked and internally scaled; a textbook Householder
-     * sweep is neither, so two correct implementations diverge by around a
-     * digit on an ill-conditioned design where a sum would agree to the last
-     * bit. And 13 digits is not the right target to begin with: NIST's own
-     * assessment of statistical packages on these datasets treats LRE 11 as
-     * the level of an adequate implementation, which is the bar used here.
+     * Filip is a degree-10 polynomial with a condition number near 1.8e15 --
+     * NIST notes that many statistical packages cannot fit it at all. This
+     * implementation reaches 8.02 correct digits on the coefficients and 7.71
+     * on their standard errors, against numpy's 8.55 and 8.47, so it is a
+     * fraction of a digit short of an implementation calling LAPACK. Column
+     * equilibration, column pivoting and a doubled-precision refinement
+     * residual were each tried against it and each made it worse; what is
+     * left is LAPACK's blocked factorisation itself.
+     *
+     * Naming the dataset keeps every other assertion at the standard 0.5
+     * margin. A global allowance large enough to cover Filip would have let a
+     * real regression through anywhere else.
+     *
+     * @var array<string, array<string, float>>
      */
-    public const float REGRESSION_DIGITS = 11.0;
-
-    public const float REGRESSION_MARGIN = 1.0;
+    private const array EXCEPTIONS = [
+        'Filip' => [
+            'coefficients' => 1.0,
+            'standardErrors' => 1.0,
+        ],
+    ];
 
     /** @var array<string, array<string, array<string, float|null>>> keyed by source file */
     private static array $ceilings = [];
@@ -68,9 +79,8 @@ final class AttainableAccuracy
         string $source = 'nist/attainable.json',
     ): float {
         $measured = self::ceilings($source);
-        $isRegression = $source !== 'nist/attainable.json';
-        $baseline = $isRegression ? self::REGRESSION_DIGITS : (float) Lre::DEFAULT_DIGITS;
-        $margin = $isRegression ? self::REGRESSION_MARGIN : self::MARGIN;
+        $baseline = (float) Lre::DEFAULT_DIGITS;
+        $margin = self::EXCEPTIONS[$dataset][$statistic] ?? self::MARGIN;
 
         // Deliberately not `??`: a null value here means "hit exactly", which
         // is the most interesting case, and `??` would silently treat it as a

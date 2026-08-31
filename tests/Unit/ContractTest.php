@@ -244,6 +244,23 @@ final class ContractTest extends TestCase
         yield 'a correlation of two points' => [
             static fn () => Correlation::pearson([1.0, 2.0], [2.0, 1.0]),
         ];
+        yield 'the variance of two values' => [static fn () => Descriptive::of([1.0, 2.0])->variance()];
+        yield 'the skewness of three values' => [
+            static fn () => Descriptive::of([1.0, 2.0, 4.0])->skewness(),
+        ];
+        yield 'the kurtosis of four values' => [
+            static fn () => Descriptive::of([1.0, 2.0, 4.0, 8.0])->kurtosis(),
+        ];
+        yield 'the autocorrelation at the longest usable lag' => [
+            static fn () => Descriptive::of([1.0, 2.0, 4.0, 8.0])->autocorrelation(3),
+        ];
+        yield 'a quantile at either end' => [
+            static function (): array {
+                $sample = Descriptive::of([1.0, 2.0, 3.0]);
+
+                return [$sample->quantile(0.0), $sample->quantile(1.0)];
+            },
+        ];
         yield 'an analysis of variance of two groups' => [
             static fn () => OneWayAnova::of([[1.0, 2.0], [3.0, 4.0]]),
         ];
@@ -288,31 +305,60 @@ final class ContractTest extends TestCase
      */
     public function test_it_normalises_however_the_values_arrive(): void
     {
-        $expected = Descriptive::of([1.0, 2.0, 3.0, 4.0])->mean();
+        // Through autocorrelation rather than the mean, and that is the whole
+        // point of the test rather than a detail of it. A mean is a sum, and a
+        // sum does not care what the keys are: written against the mean, this
+        // passed with the normalisation deleted. Autocorrelation pairs each
+        // value with the one a fixed distance later, so it reads by position
+        // and notices immediately.
+        $series = [];
 
-        $keyed = [7 => 1.0, 'x' => 2.0, 3 => 3.0, 'y' => 4.0];
-        self::assertSame($expected, Descriptive::of($keyed)->mean(), 'an array keyed by anything');
+        for ($i = 0; $i < 40; $i++) {
+            $series[] = sin($i / 3.0) + $i / 40.0;
+        }
 
-        $generator = (static function (): Generator {
-            yield 'a' => 1.0;
-            yield 'b' => 2.0;
-            yield 'c' => 3.0;
-            yield 'd' => 4.0;
+        $expected = Descriptive::of($series)->autocorrelation(1);
+
+        $keyed = [];
+
+        foreach ($series as $i => $value) {
+            $keyed[$i % 2 === 0 ? "k{$i}" : $i * 7] = $value;
+        }
+
+        self::assertSame(
+            $expected,
+            Descriptive::of($keyed)->autocorrelation(1),
+            'an array keyed by anything, in order',
+        );
+
+        $generator = (static function () use ($series): Generator {
+            foreach ($series as $i => $value) {
+                yield "g{$i}" => $value;
+            }
         })();
 
-        self::assertSame($expected, Descriptive::of($generator)->mean(), 'a generator with string keys');
+        self::assertSame(
+            $expected,
+            Descriptive::of($generator)->autocorrelation(1),
+            'a generator with string keys',
+        );
 
-        $repeating = (static function (): Generator {
-            yield 0 => 1.0;
-            yield 0 => 2.0;
-            yield 0 => 3.0;
-            yield 0 => 4.0;
+        $repeating = (static function () use ($series): Generator {
+            foreach ($series as $value) {
+                yield 0 => $value;
+            }
         })();
 
-        // The one that actually bites: a generator may yield the same key
-        // repeatedly, and collecting it with the keys preserved would keep one
-        // value out of four.
-        self::assertSame($expected, Descriptive::of($repeating)->mean(), 'a generator repeating a key');
+        // A generator may yield the same key repeatedly, and collecting it
+        // with the keys preserved would keep one value out of forty.
+        self::assertSame(
+            $expected,
+            Descriptive::of($repeating)->autocorrelation(1),
+            'a generator repeating a key',
+        );
+
+        // And the mean, which is what anyone writes first, has to agree too.
+        self::assertSame(Descriptive::of($series)->mean(), Descriptive::of($keyed)->mean());
     }
 
     /** The same normalisation, on the two-sample routines. */

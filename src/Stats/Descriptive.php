@@ -4,11 +4,7 @@ declare(strict_types=1);
 
 namespace Vegoia\Stats;
 
-use function array_is_list;
-use function array_values;
 use function count;
-use function is_array;
-use function iterator_to_array;
 use function max;
 use function min;
 use function sort;
@@ -70,13 +66,16 @@ final class Descriptive
      */
     public static function of(iterable $values, Precision $precision = Precision::Extended): self
     {
-        if (! is_array($values)) {
-            $values = iterator_to_array($values, preserve_keys: false);
-        } elseif (! array_is_list($values)) {
-            $values = array_values($values);
-        }
-
+        // No normalising step before this loop, though there used to be one:
+        // an is_array branch calling iterator_to_array with preserve_keys off,
+        // and an array_is_list branch calling array_values. Neither could
+        // change anything. foreach walks a Generator, an Iterator and an array
+        // alike and never looks at the key, and appending to $floats
+        // re-indexes from zero whatever came in. Mutation testing found it --
+        // both branches could be deleted with nothing failing -- and the
+        // deletion is the fix, not a test for them.
         $floats = [];
+
         foreach ($values as $value) {
             $floats[] = (float) $value;
         }

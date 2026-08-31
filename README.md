@@ -259,21 +259,33 @@ is PHP's tracing JIT -- one ini flag, worth 2-5x on these kernels:
 php -d opcache.enable_cli=1 -d opcache.jit=tracing -d opcache.jit_buffer_size=128M
 ```
 
-Leiden community detection:
+Leiden community detection, on the SNAP graphs the literature benchmarks
+(`python3 tools/fetch_benchmark_graphs.py`) -- real networks, heavy-tailed,
+with the hubs a planted-partition generator never produces:
 
-| graph  | nodes   | edges   | Vegoia   | **Vegoia + JIT** | leidenalg (C) | via Python sidecar |
-|--------|---------|---------|----------|------------------|---------------|--------------------|
-| small  | 1 000   | 5 463   | 10.0 ms  | **4.7 ms**       | 5.2 ms        | 472 ms             |
-| medium | 5 000   | 27 741  | 66 ms    | **26 ms**        | 36 ms         | 558 ms             |
-| large  | 20 000  | 110 267 | 361 ms   | **147 ms**       | 194 ms        | 761 ms             |
-| huge   | 50 000  | 274 243 | 1 114 ms | **485 ms**       | 707 ms        | 1 445 ms           |
-| 100k   | 100 000 | 550 462 | 2 620 ms | **1 087 ms**     | 1 943 ms      | 2 853 ms           |
+| graph             | nodes   | edges     | **Vegoia + JIT** | leidenalg (C) | ratio |
+|-------------------|---------|-----------|------------------|---------------|-------|
+| ca-GrQc           | 5 241   | 14 484    | **25 ms**        | 19 ms         | 1.32x |
+| ca-HepTh          | 9 875   | 25 973    | **55 ms**        | 42 ms         | 1.31x |
+| facebook_combined | 4 039   | 88 234    | **52 ms**        | 34 ms         | 1.53x |
+| ca-CondMat        | 23 133  | 93 439    | **196 ms**       | 144 ms        | 1.36x |
+| email-Enron       | 36 692  | 183 831   | **534 ms**       | 314 ms        | 1.70x |
+| com-dblp          | 317 080 | 1 049 866 | **5 490 ms**     | 5 973 ms      | 0.92x |
+| com-amazon        | 334 863 | 925 872   | **6 230 ms**     | 6 306 ms      | 0.99x |
 
-With the JIT on, this implementation outruns `leidenalg` -- the reference C
-implementation, and the one a Python sidecar actually calls -- at every size
-measured. The sidecar lane (spawn `python3`, import igraph and leidenalg, JSON
-in and out) loses everywhere, 100k included: the half-second of fixed process
-cost never pays for itself against an in-process run.
+Within 1.3-1.7x of the C reference on mid-sized graphs, and level with it past
+300k nodes. Quality is the same or better -- modularity within 0.0002 on every
+graph, and ahead on three of five:
+
+| graph       | Vegoia    | leidenalg | difference |
+|-------------|-----------|-----------|------------|
+| ca-GrQc     | 0.866313  | 0.865842  | **+0.00047** |
+| ca-CondMat  | 0.743108  | 0.742007  | **+0.00110** |
+| email-Enron | 0.629078  | 0.627303  | **+0.00178** |
+| ca-HepTh    | 0.777860  | 0.778026  | -0.00017   |
+| facebook    | 0.835694  | 0.835815  | -0.00012   |
+
+Zero internally disconnected communities across all of them.
 
 Honesty requires the next number too: igraph also ships a natively tuned
 `community_leiden` that does the 100k graph in about 520 ms -- roughly 2x ahead

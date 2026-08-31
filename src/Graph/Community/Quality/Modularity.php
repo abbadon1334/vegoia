@@ -104,8 +104,15 @@ final readonly class Modularity implements QualityFunction
             return 0.0;
         }
 
+        // Grouped exactly as Leiden's inlined fast path groups it. The two are
+        // equal in real arithmetic but not bit for bit, and Leiden runs
+        // several passes where a last-bit difference compounds into a
+        // different move and then a different partition. Keeping the
+        // association identical is what makes the fast path a pure
+        // optimisation rather than a second, subtly different algorithm --
+        // LeidenPathEquivalenceTest checks it.
         return $weightToCommunity
-            - $this->resolution * $nodeStrength * $communityStrength / $totalEndpointWeight;
+            - $this->resolution / $totalEndpointWeight * $nodeStrength * $communityStrength;
     }
 
     public function measure(float $strength, float $size): float

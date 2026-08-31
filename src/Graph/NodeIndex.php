@@ -100,28 +100,4 @@ final class NodeIndex
 
         return $labelled;
     }
-
-    /**
-     * Build a graph from edges given as identifier pairs, registering any node
-     * not seen before.
-     *
-     * @param  iterable<array{0: string, 1: string, 2?: float|int}> $edges
-     * @param  iterable<string>                                     $nodes declare these to keep isolated nodes
-     * @return array{Graph, self}
-     */
-    public static function graphFrom(iterable $edges, iterable $nodes = []): array
-    {
-        $index = self::of($nodes);
-        $translated = [];
-
-        foreach ($edges as $edge) {
-            $translated[] = [
-                $index->add($edge[0]),
-                $index->add($edge[1]),
-                (float) ($edge[2] ?? 1.0),
-            ];
-        }
-
-        return [Graph::undirected($index->count(), $translated), $index];
-    }
 }

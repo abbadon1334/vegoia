@@ -20,7 +20,7 @@ declare(strict_types=1);
 use Vegoia\Graph\Community\Leiden;
 use Vegoia\Graph\Community\Quality\Modularity;
 use Vegoia\Graph\Connectivity;
-use Vegoia\Graph\NodeIndex;
+use Vegoia\Interop\LabelledGraph;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -40,7 +40,9 @@ final class LeidenDetector
     {
         // Declaring the nodes keeps isolated ones in the result: a claim with
         // no links is a community of one, not an absence.
-        [$graph, $index] = NodeIndex::graphFrom($edges, $nodes);
+        $imported = LabelledGraph::fromEdges($edges, $nodes);
+        $graph = $imported->graph;
+        $index = $imported->index;
 
         $partition = Leiden::modularity($resolution, $seed)->partition($graph);
         $modularity = new Modularity($resolution)->of($graph, $partition);
@@ -119,7 +121,9 @@ if ($result['orphans'] !== []) {
 }
 
 // The guarantee that made Leiden worth implementing, asserted on the result.
-[$graph, $index] = NodeIndex::graphFrom($edges, $nodes);
+$imported = LabelledGraph::fromEdges($edges, $nodes);
+$graph = $imported->graph;
+$index = $imported->index;
 $allConnected = true;
 
 foreach ($grouped as $members) {

@@ -4,26 +4,44 @@
     "type": "library",
     "license": "MIT",
     "keywords": [
-        "graph", "leiden", "louvain", "community-detection", "modularity", "cpm",
-        "statistics", "pagerank", "centrality", "betweenness", "graphrag", "rag"
+        "graph",
+        "leiden",
+        "louvain",
+        "community-detection",
+        "modularity",
+        "cpm",
+        "statistics",
+        "pagerank",
+        "centrality",
+        "betweenness",
+        "graphrag",
+        "rag"
     ],
     "authors": [
-        { "name": "Francesco Danti", "email": "fdanti@gmail.com" }
+        {
+            "name": "Francesco Danti",
+            "email": "fdanti@gmail.com"
+        }
     ],
     "require": {
         "php": ">=8.5"
     },
     "require-dev": {
+        "graphp/graph": "^0.9.3",
         "infection/infection": "^0.35.3",
         "laravel/pint": "^1.27",
         "phpstan/phpstan": "^2.1",
         "phpunit/phpunit": "^12.5"
     },
     "autoload": {
-        "psr-4": { "Vegoia\\": "src/" }
+        "psr-4": {
+            "Vegoia\\": "src/"
+        }
     },
     "autoload-dev": {
-        "psr-4": { "Vegoia\\Tests\\": "tests/" }
+        "psr-4": {
+            "Vegoia\\Tests\\": "tests/"
+        }
     },
     "scripts": {
         "test": "phpunit",
@@ -32,7 +50,11 @@
         "stan": "phpstan analyse",
         "fmt": "pint",
         "fmt:check": "pint --test",
-        "check": ["@fmt:check", "@stan", "@test"]
+        "check": [
+            "@fmt:check",
+            "@stan",
+            "@test"
+        ]
     },
     "config": {
         "sort-packages": true,
@@ -42,5 +64,8 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "suggest": {
+        "graphp/graph": "To hand an existing graphp/graph object to Vegoia\\Interop\\Graphp::import(). Not needed otherwise: nothing here requires it at runtime."
+    }
 }

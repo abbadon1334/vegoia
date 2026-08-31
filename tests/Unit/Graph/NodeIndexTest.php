@@ -43,30 +43,6 @@ final class NodeIndexTest extends TestCase
         self::assertTrue($index->has('gamma'));
     }
 
-    public function test_it_builds_a_graph_from_identifier_pairs(): void
-    {
-        [$graph, $index] = NodeIndex::graphFrom([
-            ['claim-a', 'claim-b', 0.9],
-            ['claim-b', 'claim-c', 0.4],
-        ]);
-
-        self::assertSame(3, $graph->order());
-        self::assertSame(2, $graph->size());
-        self::assertSame(0.9, $graph->edgeWeight($index->nodeFor('claim-a'), $index->nodeFor('claim-b')));
-    }
-
-    /**
-     * Nodes with no edges would otherwise vanish, and an isolated claim is a
-     * result -- it belongs to a community of its own, not to nothing.
-     */
-    public function test_isolated_nodes_survive_when_declared_up_front(): void
-    {
-        [$graph, $index] = NodeIndex::graphFrom([['a', 'b']], ['a', 'b', 'orphan']);
-
-        self::assertSame(3, $graph->order());
-        self::assertSame(0, $graph->degree($index->nodeFor('orphan')));
-    }
-
     public function test_it_translates_a_partition_back_into_identifiers(): void
     {
         $index = NodeIndex::of(['x', 'y', 'z']);
@@ -82,15 +58,5 @@ final class NodeIndexTest extends TestCase
         $this->expectException(InvalidArgument::class);
 
         NodeIndex::of(['a'])->nodeFor('b');
-    }
-
-    public function test_the_numbering_is_reproducible_across_builds(): void
-    {
-        $edges = [['b', 'c'], ['a', 'b']];
-
-        [, $first] = NodeIndex::graphFrom($edges);
-        [, $second] = NodeIndex::graphFrom($edges);
-
-        self::assertSame($first->identifiers(), $second->identifiers());
     }
 }

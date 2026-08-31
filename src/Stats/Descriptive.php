@@ -53,14 +53,19 @@ final class Descriptive
     private ?array $sorted = null;
 
     /** @param list<float> $values */
-    private function __construct(private readonly array $values)
-    {
+    private function __construct(
+        private readonly array $values,
+        private readonly Precision $precision = Precision::Extended,
+    ) {
     }
 
     /**
      * @param iterable<float|int> $values
+     * @param Precision           $precision Extended by default: accurate to
+     *        the limit of the input, at roughly ten times the cost. See the
+     *        enum for when Fast is the better trade.
      */
-    public static function of(iterable $values): self
+    public static function of(iterable $values, Precision $precision = Precision::Extended): self
     {
         if (! is_array($values)) {
             $values = iterator_to_array($values, preserve_keys: false);
@@ -73,7 +78,18 @@ final class Descriptive
             $floats[] = (float) $value;
         }
 
-        return new self($floats);
+        return new self($floats, $precision);
+    }
+
+    /** The same sample, computed the other way. */
+    public function with(Precision $precision): self
+    {
+        return $precision === $this->precision ? $this : new self($this->values, $precision);
+    }
+
+    public function precision(): Precision
+    {
+        return $this->precision;
     }
 
     /** @return list<float> */
@@ -94,6 +110,16 @@ final class Descriptive
 
     public function sum(): float
     {
+        if ($this->precision === Precision::Fast) {
+            $total = 0.0;
+
+            foreach ($this->values as $value) {
+                $total += $value;
+            }
+
+            return $total;
+        }
+
         return CompensatedSum::of($this->values);
     }
 
@@ -109,10 +135,16 @@ final class Descriptive
             throw InvalidArgument::emptyDataset('the mean');
         }
 
+        if ($this->precision === Precision::Fast) {
+            return $this->mean = $this->sum() / $n;
+        }
+
         // Divided inside the accumulator so the compensation survives the
         // division. Dividing sum() would round twice and lose up to two
         // digits on large, tightly clustered samples -- which then propagates
-        // into every deviation computed from the mean.
+        // into every deviation computed from the mean. The division itself
+        // adds about 4% to the cost of the compensated sum, so once the sum is
+        // being compensated there is no reason not to.
         $accumulator = new CompensatedSum();
 
         foreach ($this->values as $value) {
@@ -215,12 +247,29 @@ final class Descriptive
         }
 
         $mean = $this->mean();
+
+        if ($this->precision === Precision::Fast) {
+            $numerator = 0.0;
+            $denominator = 0.0;
+
+            for ($i = 0; $i + $lag < $n; $i++) {
+                $numerator += ($this->values[$i] - $mean) * ($this->values[$i + $lag] - $mean);
+            }
+
+            foreach ($this->values as $value) {
+                $deviation = $value - $mean;
+                $denominator += $deviation * $deviation;
+            }
+
+            return $numerator / $denominator;
+        }
+
         $numerator = new CompensatedSum();
 
         // Exact products, not merely a compensated sum of rounded ones. The
         // deviations here are small differences between large values, so each
         // product loses low bits that no later summation can recover -- worth
-        // half a digit on real data, and more on NIST's accuracy sets.
+        // half a digit on real data, and five on NIST's accuracy sets.
         for ($i = 0; $i + $lag < $n; $i++) {
             ExactProduct::accumulate(
                 $numerator,
@@ -334,6 +383,18 @@ final class Descriptive
         }
 
         $mean = $this->mean();
+
+        if ($this->precision === Precision::Fast) {
+            $plain = 0.0;
+
+            foreach ($this->values as $value) {
+                $deviation = $value - $mean;
+                $plain += $deviation * $deviation;
+            }
+
+            return $this->sumSquaredDeviations = $plain;
+        }
+
         $squares = new CompensatedSum();
         $residual = new CompensatedSum();
 

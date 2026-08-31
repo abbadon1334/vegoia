@@ -1,5 +1,7 @@
 # Vegoia
 
+[![CI](https://github.com/abbadon1334/vegoia/actions/workflows/ci.yml/badge.svg)](https://github.com/abbadon1334/vegoia/actions/workflows/ci.yml)
+
 Graph algorithms and statistics for PHP — Leiden community detection, centrality,
 shortest paths, and numerically sound statistics. **Zero runtime dependencies.**
 

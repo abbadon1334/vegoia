@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import gzip
 import json
+import os
 import pathlib
 import statistics
 import sys
@@ -43,6 +44,18 @@ import igraph as ig
 import leidenalg
 from networkx.generators.community import LFR_benchmark_graph
 from sklearn.metrics import adjusted_rand_score, normalized_mutual_info_score
+
+# Python randomises string hashing per process, which changes the iteration
+# order of sets of node names, which changes the order floating-point sums are
+# accumulated in -- and that moves the last bit of results like harmonic
+# centrality. The fixtures then differ between regenerations for no reason
+# anyone would guess. Re-exec once with the seed pinned so the output is a
+# function of the input alone.
+if os.environ.get("PYTHONHASHSEED") != "0":
+    os.environ["PYTHONHASHSEED"] = "0"
+    os.execv(sys.executable, [sys.executable, *sys.argv])
+
+
 
 SEEDS = list(range(1, 21))
 SNAP = "https://snap.stanford.edu/data/"

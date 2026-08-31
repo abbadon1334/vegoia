@@ -22,6 +22,7 @@ Usage:  python3 tools/generate_graph_fixtures.py [outdir]
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 import statistics
 import sys
@@ -29,6 +30,18 @@ import sys
 import igraph as ig
 import leidenalg
 import networkx as nx
+
+# Python randomises string hashing per process, which changes the iteration
+# order of sets of node names, which changes the order floating-point sums are
+# accumulated in -- and that moves the last bit of results like harmonic
+# centrality. The fixtures then differ between regenerations for no reason
+# anyone would guess. Re-exec once with the seed pinned so the output is a
+# function of the input alone.
+if os.environ.get("PYTHONHASHSEED") != "0":
+    os.environ["PYTHONHASHSEED"] = "0"
+    os.execv(sys.executable, [sys.executable, *sys.argv])
+
+
 
 SEEDS = list(range(1, 51))
 

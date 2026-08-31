@@ -14,11 +14,24 @@ Usage: python3 tools/generate_directed_fixtures.py [outdir]
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 import sys
 
 import networkx as nx
 import numpy as np
+
+# Python randomises string hashing per process, which changes the iteration
+# order of sets of node names, which changes the order floating-point sums are
+# accumulated in -- and that moves the last bit of results like harmonic
+# centrality. The fixtures then differ between regenerations for no reason
+# anyone would guess. Re-exec once with the seed pinned so the output is a
+# function of the input alone.
+if os.environ.get("PYTHONHASHSEED") != "0":
+    os.environ["PYTHONHASHSEED"] = "0"
+    os.execv(sys.executable, [sys.executable, *sys.argv])
+
+
 
 
 def is_well_posed(M) -> bool:

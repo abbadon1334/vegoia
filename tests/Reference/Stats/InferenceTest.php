@@ -244,7 +244,9 @@ final class InferenceTest extends TestCase
 
         // Present on every dataset that reaches here: the rank-deficient ones
         // return above, and they are the only ones the fixture omits it for.
-        self::assertArrayHasKey('statsmodels', $entry, $name);
+        if (! isset($entry['statsmodels'])) {
+            self::fail("{$name}: the fixture omits statsmodels for a design that is not rank deficient");
+        }
 
         foreach ($entry['statsmodels']['predictions'] as $prediction) {
             $design = $prediction['design'];

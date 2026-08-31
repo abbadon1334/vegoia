@@ -203,6 +203,20 @@ lot. Against the OpenBLAS build numpy actually loads, this is ahead on 9 of the
 The harness is in `tools/lapack/`, so the comparison can be re-run rather than
 taken on trust.
 
+### How these compare to what the reference libraries demand
+
+Worth knowing before reading the table as a scorecard: the bar here is higher
+than the one the reference libraries hold themselves to.
+
+Of the NIST collections used, scipy tests only the ANOVA sets, at `rtol=1e-7`
+— about seven correct digits. Neither scipy nor numpy tests the linear least
+squares or univariate summary sets at all, and leidenalg ships no test suite in
+its distribution. This library asserts against all four collections, and at
+thresholds measured from what numpy attains rather than at a fixed epsilon.
+
+On SmLs04, the one dataset where the two suites overlap, scipy asks for 7
+digits and this reaches 10.43.
+
 Where a figure is below 15, the limit is the arithmetic, not the algorithm:
 `10000000.2` is not representable in binary64, so `NumAcc4` is capped near 8
 digits for anyone. That is not asserted, it is *measured* —

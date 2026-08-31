@@ -16,6 +16,7 @@ use function sqrt;
 
 use Vegoia\Exception\InvalidArgument;
 use Vegoia\Support\CompensatedSum;
+use Vegoia\Support\ExactProduct;
 
 /**
  * Univariate summary statistics, computed the accurate way.
@@ -206,11 +207,19 @@ final class Descriptive
         $mean = $this->mean();
         $numerator = new CompensatedSum();
 
+        // Exact products, not merely a compensated sum of rounded ones. The
+        // deviations here are small differences between large values, so each
+        // product loses low bits that no later summation can recover -- worth
+        // half a digit on real data, and more on NIST's accuracy sets.
         for ($i = 0; $i + $lag < $n; $i++) {
-            $numerator->add(($this->values[$i] - $mean) * ($this->values[$i + $lag] - $mean));
+            ExactProduct::accumulate(
+                $numerator,
+                $this->values[$i] - $mean,
+                $this->values[$i + $lag] - $mean,
+            );
         }
 
-        return $numerator->value() / $this->centredSumOfSquares();
+        return $numerator->value() / $this->exactSumOfSquares();
     }
 
     /** Fisher-Pearson sample skewness (the g1 moment estimator). */
@@ -327,6 +336,27 @@ final class Descriptive
         $correction = $residual->value() ** 2 / $this->count();
 
         return $this->sumSquaredDeviations = $squares->value() - $correction;
+    }
+
+    /**
+     * Sum of squared deviations with exact products.
+     *
+     * The autocorrelation's denominator, kept separate from
+     * centredSumOfSquares() because that one carries the residual correction
+     * the variance needs, while this one needs the extra precision instead --
+     * NIST defines r(k) against the plain sum of squares.
+     */
+    private function exactSumOfSquares(): float
+    {
+        $mean = $this->mean();
+        $squares = new CompensatedSum();
+
+        foreach ($this->values as $value) {
+            $deviation = $value - $mean;
+            ExactProduct::accumulate($squares, $deviation, $deviation);
+        }
+
+        return $squares->value();
     }
 
     /** @return list<float> */

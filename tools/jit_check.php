@@ -14,6 +14,13 @@ declare(strict_types=1);
  * process, because the JIT is a process-level setting; this script catches it
  * by running the same work in both modes and comparing checksums.
  *
+ * Coverage is the whole point and was once its weakness: the first version
+ * checked Leiden, PageRank, descriptive statistics and least squares, and
+ * missed Surprise -- which then diverged under the JIT in CI, counting 105
+ * edges on a 78-edge graph. Every public entry point that does floating-point
+ * work or walks the graph is checked here now, because a JIT check with a hole
+ * in it is worse than none: it invites trust it has not earned.
+ *
  * Exits non-zero on any divergence.
  *
  * Usage: php tools/jit_check.php
@@ -26,11 +33,34 @@ require $argv[1] . "/vendor/autoload.php";
 
 use Random\Engine\Xoshiro256StarStar;
 use Random\Randomizer;
+use Vegoia\Graph\Centrality\Betweenness;
+use Vegoia\Graph\Centrality\Closeness;
+use Vegoia\Graph\Centrality\Eigenvector;
+use Vegoia\Graph\Centrality\Harmonic;
+use Vegoia\Graph\Centrality\Hits;
+use Vegoia\Graph\Centrality\Katz;
 use Vegoia\Graph\Centrality\PageRank;
+use Vegoia\Graph\Clustering;
+use Vegoia\Graph\Community\Agreement;
 use Vegoia\Graph\Community\Leiden;
+use Vegoia\Graph\Community\Quality\ConstantPotts;
+use Vegoia\Graph\Community\Quality\ErdosRenyiPotts;
 use Vegoia\Graph\Community\Quality\Modularity;
+use Vegoia\Graph\Community\Quality\Significance;
+use Vegoia\Graph\Community\Quality\Surprise;
+use Vegoia\Graph\Connectivity;
 use Vegoia\Graph\Graph;
+use Vegoia\Graph\KCore;
+use Vegoia\Graph\Partition;
+use Vegoia\Graph\Path\BreadthFirst;
+use Vegoia\Graph\Path\Dijkstra;
+use Vegoia\Rag\MaximalMarginalRelevance;
+use Vegoia\Rag\NearestNeighbours;
+use Vegoia\Rag\Similarity;
+use Vegoia\Stats\Correlation;
 use Vegoia\Stats\Descriptive;
+use Vegoia\Stats\OneWayAnova;
+use Vegoia\Stats\Precision;
 use Vegoia\Stats\Regression\LeastSquares;
 
 // A deterministic graph big enough for the JIT to warm up and trace.
@@ -63,12 +93,76 @@ for ($i = 0; $i < 500; $i++) {
 }
 $fit = LeastSquares::polynomial($x, $y, degree: 3);
 
+$g = static fn (array $v): array => array_map(static fn (float $x): string => sprintf('%.17g', $x), $v);
+$n = static fn (float $x): string => sprintf('%.17g', $x);
+
+$directed = Graph::directed(6, [
+    [0, 3, 1.0], [0, 4, 1.0], [0, 5, 1.0], [1, 3, 1.0], [1, 4, 1.0], [2, 4, 1.0], [2, 5, 1.0],
+]);
+$hits = (new Hits())->of($directed);
+$other = Leiden::modularity(seed: 7)->partition($graph);
+
 echo md5(json_encode([
+    // community detection, all three objectives
     'membership' => $partition->membership(),
-    'modularity' => sprintf('%.17g', (new Modularity())->of($graph, $partition)),
-    'pagerank' => array_map(static fn (float $v): string => sprintf('%.17g', $v), (new PageRank())->of($graph)),
-    'stdDev' => sprintf('%.17g', $stats->stdDev()),
-    'coefficients' => array_map(static fn (float $v): string => sprintf('%.17g', $v), $fit->coefficients),
+    'modularity' => $n((new Modularity())->of($graph, $partition)),
+    'cpm' => $n((new ConstantPotts(0.1))->of($graph, $partition)),
+    'rber' => $n((new ErdosRenyiPotts())->of($graph, $partition)),
+    // the two that are scored but not optimised -- the pair that diverged
+    'surprise' => $n((new Surprise())->of($graph, $partition)),
+    'significance' => $n((new Significance())->of($graph, $partition)),
+    'cpm_partition' => Leiden::constantPotts(0.05, 3)->partition($graph)->membership(),
+    'rber_partition' => Leiden::erdosRenyiPotts(1.0, 3)->partition($graph)->membership(),
+    // agreement between two runs
+    'nmi' => $n(Agreement::normalisedMutualInformation($partition, $other)),
+    'ari' => $n(Agreement::adjustedRandIndex($partition, $other)),
+    'vi' => $n(Agreement::variationOfInformation($partition, $other)),
+    // centrality
+    'pagerank' => $g((new PageRank())->of($graph)),
+    'pagerank_personalised' => $g((new PageRank())->of($graph, [0 => 1.0, 5 => 1.0])),
+    'betweenness' => $g(Betweenness::of($graph)),
+    'betweenness_weighted' => $g(Betweenness::weighted($graph)),
+    'closeness' => $g(Closeness::of($graph)),
+    'eigenvector' => $g((new Eigenvector())->of($graph)),
+    'harmonic' => $g(Harmonic::of($graph)),
+    'katz' => $g((new Katz(0.01))->of($graph)),
+    'hits' => [$g($hits['hubs']), $g($hits['authorities'])],
+    // structure
+    'clustering' => $g(Clustering::coefficients($graph)),
+    'triangles' => Clustering::triangles($graph),
+    'transitivity' => $n(Clustering::transitivity($graph)),
+    'core' => KCore::coreNumbers($graph),
+    'components' => Connectivity::components($graph)->membership(),
+    'bfs' => $g(BreadthFirst::distancesFrom($graph, 0)),
+    'dijkstra' => $g(Dijkstra::distancesFrom($graph, 0)),
+    // statistics, in both precisions
+    'stdDev' => $n($stats->stdDev()),
+    'mean' => $n($stats->mean()),
+    'skewness' => $n($stats->skewness()),
+    'autocorrelation' => $n($stats->autocorrelation(1)),
+    'fast_stdDev' => $n($stats->with(Precision::Fast)->stdDev()),
+    'fast_autocorrelation' => $n($stats->with(Precision::Fast)->autocorrelation(1)),
+    'pearson' => $n(Correlation::pearson($x, $y)),
+    'spearman' => $n(Correlation::spearman($x, $y)),
+    'kendall' => $n(Correlation::kendall(array_slice($x, 0, 120), array_slice($y, 0, 120))),
+    'anova' => $n(OneWayAnova::of([array_slice($x, 0, 100), array_slice($x, 100, 100), array_slice($y, 0, 100)])->fStatistic),
+    // regression
+    'coefficients' => $g($fit->coefficients),
+    'standard_errors' => $g($fit->standardErrors),
+    'r_squared' => $n($fit->rSquared),
+    // retrieval
+    'cosine' => $n(Similarity::cosine(array_slice($x, 0, 64), array_slice($y, 0, 64))),
+    'knn' => array_keys(NearestNeighbours::cosine(
+        array_slice($x, 0, 8),
+        ['a' => array_slice($x, 0, 8), 'b' => array_slice($y, 0, 8), 'c' => array_slice($x, 8, 8)],
+        2,
+    )),
+    'mmr' => MaximalMarginalRelevance::select(
+        array_slice($x, 0, 8),
+        ['a' => array_slice($x, 0, 8), 'b' => array_slice($y, 0, 8), 'c' => array_slice($x, 8, 8)],
+        2,
+        0.5,
+    ),
 ])), "\n";
 CODE;
 

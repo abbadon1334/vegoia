@@ -62,6 +62,10 @@ use Vegoia\Stats\Descriptive;
 use Vegoia\Stats\OneWayAnova;
 use Vegoia\Stats\Precision;
 use Vegoia\Stats\Regression\LeastSquares;
+use Vegoia\Stats\Distribution\ChiSquared;
+use Vegoia\Stats\Distribution\FisherSnedecor;
+use Vegoia\Stats\Distribution\Normal;
+use Vegoia\Stats\Distribution\StudentT;
 use Vegoia\Stats\SpecialFunction;
 
 // A deterministic graph big enough for the JIT to warm up and trace.
@@ -171,6 +175,25 @@ echo md5(json_encode([
         SpecialFunction::regularizedBeta(0.25, 2.0, 3.0),
         SpecialFunction::regularizedBeta(0.9, 100.0, 100.0),
         SpecialFunction::regularizedBeta(1.0e-6, 50.0, 5.0),
+    ]),
+    // distributions: both tails and the bracketed Newton behind the quantile,
+    // whose iteration count depends on the data it is given
+    'normal' => $g([
+        new Normal()->survival(6.0), new Normal()->cumulative(-6.0),
+        new Normal()->upperQuantile(1.0e-12), new Normal(3.0, 2.5)->quantile(0.05),
+    ]),
+    'student_t' => $g([
+        new StudentT(5.0)->survival(3.0), new StudentT(1.0)->upperQuantile(1.0e-12),
+        new StudentT(1000.0)->survival(1.646), new StudentT(30.0)->quantile(0.975),
+    ]),
+    'chi_squared' => $g([
+        new ChiSquared(3.0)->survival(12.0), new ChiSquared(500.0)->survival(700.0),
+        new ChiSquared(10.0)->upperQuantile(1.0e-6),
+    ]),
+    'fisher' => $g([
+        new FisherSnedecor(3.0, 10.0)->survival(5.0),
+        new FisherSnedecor(100.0, 10.0)->density(100.0),
+        new FisherSnedecor(2.0, 5.0)->upperQuantile(0.01),
     ]),
     // retrieval
     'cosine' => $n(Similarity::cosine(array_slice($x, 0, 64), array_slice($y, 0, 64))),

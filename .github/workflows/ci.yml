@@ -172,6 +172,7 @@ jobs:
           python3 tools/generate_lls_attainable.py
           python3 tools/generate_anova_attainable.py
           python3 tools/generate_special_function_fixtures.py
+          python3 tools/generate_distribution_fixtures.py
 
       - name: The references must still give the same answers
         run: python3 tools/compare_fixtures.py "${RUNNER_TEMP}/fixtures-committed" resources/fixtures

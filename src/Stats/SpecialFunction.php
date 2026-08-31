@@ -135,8 +135,11 @@ final class SpecialFunction
     {
         $shifted = $a + self::G;
 
+        [$logarithm, $correction] = self::logRatio($x, 1.0, $shifted);
+
         $total = new CompensatedSum();
-        ExactProduct::accumulate($total, $a, self::logRatio($x, $shifted));
+        ExactProduct::accumulate($total, $a, $logarithm);
+        ExactProduct::accumulate($total, $a, $correction);
 
         return $total
             ->add($shifted - $x)
@@ -152,17 +155,35 @@ final class SpecialFunction
      * naive form subtracts 139.66 from 138.63 to reach 1.03, which measured
      * 12.86 digits against SciPy's 15.11. In ratio form the largest term is
      * about 5.
+     *
+     * `$complement` exists because 1 - x is its own loss when x is near one,
+     * and a caller often knows the difference exactly while the subtraction
+     * cannot. The F distribution's argument at (100, 10) degrees of freedom
+     * and x = 100 is z = 10000/10010; forming 1 - z leaves 13.47 digits,
+     * which the b = 5 exponent turns into a density accurate to 12.78 against
+     * SciPy's 13.33. Passing d2/(d1 x + d2) instead costs nothing and loses
+     * nothing.
      */
-    private static function logBetaPrefix(float $x, float $a, float $b): CompensatedSum
-    {
+    private static function logBetaPrefix(
+        float $x,
+        float $a,
+        float $b,
+        ?float $complement = null,
+    ): CompensatedSum {
+        $oneMinusX = $complement ?? 1.0 - $x;
         $c = $a + $b;
         $shiftedA = $a + self::G;
         $shiftedB = $b + self::G;
         $shiftedC = $c + self::G;
 
+        [$logA, $correctionA] = self::logRatio($x, $shiftedC, $shiftedA);
+        [$logB, $correctionB] = self::logRatio($oneMinusX, $shiftedC, $shiftedB);
+
         $total = new CompensatedSum();
-        ExactProduct::accumulate($total, $a, self::logRatio($x * $shiftedC, $shiftedA));
-        ExactProduct::accumulate($total, $b, self::logRatio((1.0 - $x) * $shiftedC, $shiftedB));
+        ExactProduct::accumulate($total, $a, $logA);
+        ExactProduct::accumulate($total, $a, $correctionA);
+        ExactProduct::accumulate($total, $b, $logB);
+        ExactProduct::accumulate($total, $b, $correctionB);
 
         return $total
             ->add(0.5 * log($shiftedC / ($shiftedA * $shiftedB)))
@@ -209,6 +230,48 @@ final class SpecialFunction
         return 1.0 + self::regularizedGammaP(0.5, $x * $x);
     }
 
+    /**
+     * x^a e^-x / gamma(a), the density of the gamma distribution without its
+     * scale, and the factor in front of both incomplete gammas.
+     *
+     * Public because the chi-squared density is exactly this over x, and
+     * writing that density out again from logarithms would repeat the
+     * cancellation this class exists to avoid -- at 500 degrees of freedom
+     * logGamma(250) is 1128, and forming the density from it directly costs
+     * the last three digits.
+     */
+    public static function gammaPrefactor(float $a, float $x): float
+    {
+        self::assertGammaArguments($a, $x);
+
+        if ($x === 0.0) {
+            return 0.0;
+        }
+
+        return self::logGammaPrefix($a, $x)->exponentiated();
+    }
+
+    /**
+     * x^a (1-x)^b / B(a, b), the factor in front of the incomplete beta.
+     *
+     * Public for the same reason: the F density is this over x, and the
+     * Student's t density is this over |t|. Both were written out from
+     * logGamma first, and both measured about a digit short of SciPy until
+     * they were routed through here.
+     */
+    public static function betaPrefactor(float $x, float $a, float $b, ?float $complement = null): float
+    {
+        if ($a <= 0.0 || $b <= 0.0) {
+            throw InvalidArgument::outOfDomain('betaPrefactor', $a, 'a and b must be positive');
+        }
+
+        if ($x <= 0.0 || $x >= 1.0) {
+            return 0.0;
+        }
+
+        return self::logBetaPrefix($x, $a, $b, $complement)->exponentiated();
+    }
+
     /** The regularized lower incomplete gamma, P(a, x). */
     public static function regularizedGammaP(float $a, float $x): float
     {
@@ -247,7 +310,13 @@ final class SpecialFunction
      * binomial tail; everything else in this class exists to support it or to
      * stand beside it.
      */
-    public static function regularizedBeta(float $x, float $a, float $b): float
+    /**
+     * @param float|null $complement 1 - x, when the caller can form it more
+     *                               accurately than the subtraction can. See
+     *                               logBetaPrefix for why that is worth an
+     *                               argument.
+     */
+    public static function regularizedBeta(float $x, float $a, float $b, ?float $complement = null): float
     {
         if ($a <= 0.0 || $b <= 0.0) {
             throw InvalidArgument::outOfDomain('regularizedBeta', $a, 'a and b must be positive');
@@ -261,46 +330,81 @@ final class SpecialFunction
             return $x;
         }
 
-        $total = self::logBetaPrefix($x, $a, $b);
+        $oneMinusX = $complement ?? 1.0 - $x;
+        $total = self::logBetaPrefix($x, $a, $b, $complement);
 
         // Underflow here is the honest answer, not a failure: the true value
         // has no double. exp() would return 0.0 anyway, but the continued
-        // fraction below is not worth entering.
+        // fraction below is not worth entering. Which end it collapses to
+        // follows the same split as the branch below.
         if ($total->value() < -745.0) {
-            return $x < ($a + 1.0) / ($a + $b + 2.0) ? 0.0 : 1.0;
+            return $x < $a / ($a + $b) ? 0.0 : 1.0;
         }
 
         $prefactor = $total->exponentiated();
 
-        // The fraction converges fast on the side of the mode where the tail
-        // is small; the reflection I_x(a,b) = 1 - I_{1-x}(b,a) reaches the
-        // other side, and is applied only when the value being subtracted is
-        // the larger one.
-        return $x < ($a + 1.0) / ($a + $b + 2.0)
+        // Which side to compute directly, and which to reach by the
+        // reflection I_x(a,b) = 1 - I_{1-x}(b,a).
+        //
+        // The textbook criterion is the mode, (a+1)/(a+b+2), and it is chosen
+        // for how fast the continued fraction converges rather than for how
+        // much the answer is worth once it arrives. Those differ. At
+        // a = 500, b = 0.5, x = 0.9973 the mode sends this to the reflection,
+        // where I_{1-x}(b,a) is 0.9 and the subtraction from one turns its
+        // relative error into nine times as much -- Student's t at 1000
+        // degrees of freedom then reported its 5% point to 12.93 digits
+        // against SciPy's 15.95.
+        //
+        // The mean, a/(a+b), is 0.999 there and keeps the direct branch,
+        // which computes the 0.1 as itself. It costs a few more iterations of
+        // a fraction that converges either way, and it is what Boost switches
+        // on for the same reason. Measured across all 665 reference points,
+        // it loses nothing anywhere else.
+        return $x < $a / ($a + $b)
             ? $prefactor * self::betaFraction($x, $a, $b) / $a
-            : 1.0 - $prefactor * self::betaFraction(1.0 - $x, $b, $a) / $b;
+            : 1.0 - $prefactor * self::betaFraction($oneMinusX, $b, $a) / $b;
     }
 
     /**
-     * log(numerator / denominator), taking whichever route keeps its digits.
+     * log(factor * scale / divisor), with the arithmetic's own rounding
+     * recovered rather than absorbed.
      *
-     * log1p on the relative deviation is the accurate one when the ratio is
-     * near 1, which is where the plain logarithm of a quotient loses the
-     * leading digits to the subtraction hidden inside it -- and near 1 is
-     * exactly where these prefactors sit when the parameters are large.
+     * Two things are going on, and both were forced by measurement.
      *
-     * Away from 1 the two swap places, and badly: at x = 1e-16 against a
-     * shift of 5.74 the deviation rounds to -1, log1p is handed a zero and
-     * every digit is gone. Measured, taking log1p everywhere cost erf(1e-8)
-     * all sixteen of them.
+     * The first is the choice between log1p and log. log1p on the deviation
+     * from 1 is the accurate one when the ratio is near 1, which is where the
+     * plain logarithm loses the leading digits to the subtraction hidden
+     * inside it. Away from 1 they swap places and badly: at x = 1e-16 against
+     * a shift of 5.74 the deviation rounds to -1, log1p is handed a zero and
+     * every digit is gone -- taking log1p everywhere cost erf(1e-8) all
+     * sixteen of them.
+     *
+     * The second is the correction. Callers multiply this logarithm by a
+     * shape parameter, and that parameter can be 500. The quotient carries a
+     * relative error of about 1e-16 from its own two roundings, the logarithm
+     * inherits it as an absolute error, and multiplying by 500 turns it into
+     * 1e-13 -- which is what capped the tail of Student's t at 1000 degrees of
+     * freedom to 12.99 digits against SciPy's 15.95. The product and the
+     * division are therefore both done in a form that hands back what they
+     * discarded, and the caller adds `parameter * correction` alongside.
+     *
+     * @return array{float, float} the logarithm, and a relative correction to
+     *                             be added to it before scaling
      */
-    private static function logRatio(float $numerator, float $denominator): float
+    private static function logRatio(float $factor, float $scale, float $divisor): array
     {
-        $deviation = ($numerator - $denominator) / $denominator;
+        [$product, $productError] = ExactProduct::of($factor, $scale);
+        $quotient = $product / $divisor;
+        [$back, $backError] = ExactProduct::of($quotient, $divisor);
 
-        return abs($deviation) < 0.5
-            ? log1p($deviation)
-            : log($numerator / $denominator);
+        // product - quotient * divisor, exactly: what the division threw away.
+        // The subtraction itself is exact, the two being within a factor of
+        // two of each other by construction.
+        $correction = ((($product - $back) - $backError) + $productError) / $product;
+
+        $deviation = $quotient - 1.0;
+
+        return [abs($deviation) < 0.5 ? log1p($deviation) : log($quotient), $correction];
     }
 
     /**

@@ -5,11 +5,19 @@ declare(strict_types=1);
 namespace Vegoia\Tests\Unit\Stats;
 
 use ArrayIterator;
+
+use function file_get_contents;
+use function json_decode;
+
+use const JSON_THROW_ON_ERROR;
+
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Vegoia\Exception\InvalidArgument;
 use Vegoia\Stats\Descriptive;
+use Vegoia\Tests\Support\Lre;
+use Vegoia\Tests\Support\Paths;
 
 #[CoversClass(Descriptive::class)]
 final class DescriptiveTest extends TestCase
@@ -99,6 +107,48 @@ final class DescriptiveTest extends TestCase
 
         self::assertSame($stats->stdDev() / $stats->mean(), $stats->coefficientOfVariation());
         self::assertEqualsWithDelta(0.4276179870, $stats->coefficientOfVariation(), 1.0e-9);
+    }
+
+    /**
+     * The residual correction in the two-pass variance, on a sample large
+     * enough to need it.
+     *
+     * Mutation testing found this gap: deleting the correction left every
+     * existing test green, because the NIST univariate sets top out at 5000
+     * observations and the residual sum(x - mean) stays negligible at that
+     * size once the mean itself is accumulated with compensation. At 200000
+     * values clustered within a micro-unit of 1e9 it is not negligible --
+     * dropping the correction moves the variance in its fourth significant
+     * digit.
+     *
+     * The expected values come from `tools/generate_variance_stress.py`, which
+     * computes them in exact rational arithmetic, so the target carries no
+     * rounding of its own.
+     */
+    public function test_the_residual_correction_matters_on_a_large_tight_sample(): void
+    {
+        /** @var array{count: int, base: int, mean: float, variance: float, standard_deviation: float} $spec */
+        $spec = json_decode(
+            (string) file_get_contents(Paths::fixture('variance_stress.json')),
+            associative: true,
+            flags: JSON_THROW_ON_ERROR,
+        );
+
+        $values = [];
+        for ($i = 0; $i < $spec['count']; $i++) {
+            $values[] = $spec['base'] + ($i % 7) * 1.0e-6;
+        }
+
+        $stats = Descriptive::of($values);
+
+        Lre::assertDigits($stats->mean(), $spec['mean'], 'mean of the stress sample', digits: 14);
+        Lre::assertDigits($stats->variance(), $spec['variance'], 'variance of the stress sample', digits: 9);
+        Lre::assertDigits(
+            $stats->stdDev(),
+            $spec['standard_deviation'],
+            'standard deviation of the stress sample',
+            digits: 9,
+        );
     }
 
     public function test_a_constant_sample_has_zero_spread(): void

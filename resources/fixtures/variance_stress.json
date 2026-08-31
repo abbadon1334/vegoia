@@ -1,0 +1,10 @@
+{
+ "note": "Constructed to exercise the Chan-Golub-LeVeque residual correction, which the NIST univariate sets are too small to reach. Expected values are exact: computed in rational arithmetic, not in floating point.",
+ "generator": "python3 tools/generate_variance_stress.py",
+ "count": 200000,
+ "base": 1000000000,
+ "pattern": "base + (i % 7) * 1e-6",
+ "mean": 1000000000.000003,
+ "variance": 4.005171348472417e-12,
+ "standard_deviation": 2.001292419531043e-06
+}

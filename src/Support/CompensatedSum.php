@@ -6,6 +6,8 @@ namespace Vegoia\Support;
 
 use function abs;
 
+use Vegoia\Exception\InvalidArgument;
+
 /**
  * Neumaier summation: a running sum that keeps the bits floating-point
  * addition would otherwise drop.
@@ -48,6 +50,53 @@ final class CompensatedSum
     public function value(): float
     {
         return $this->sum + $this->compensation;
+    }
+
+    /**
+     * Divide the accumulated total, keeping the compensation through the
+     * division.
+     *
+     * value() collapses the head and the compensation into one double before
+     * returning, so dividing its result rounds twice: once folding the tail
+     * in, once dividing. Dividing here instead recovers the remainder exactly
+     * -- via the error term of q * divisor -- and folds it back, so only the
+     * final result rounds.
+     *
+     * It is worth two digits on a mean of tightly clustered large values, and
+     * it is what lets NIST's NumAcc3 and NumAcc4 come out exact. GSL reaches
+     * the same place by accumulating in long double, which PHP does not have.
+     */
+    public function dividedBy(float $divisor): float
+    {
+        if ($divisor === 0.0) {
+            throw InvalidArgument::outOfRange('Divisor', 0.0, PHP_FLOAT_MIN, INF);
+        }
+
+        $quotient = $this->sum / $divisor;
+
+        [$product, $productError] = ExactProduct::of($quotient, $divisor);
+
+        // What the head and the compensation still owe, after removing what
+        // the quotient accounts for.
+        [$remainder, $carry] = self::twoSum(
+            $this->sum - $product,
+            $this->compensation - $productError,
+        );
+
+        return $quotient + ($remainder + $carry) / $divisor;
+    }
+
+    /**
+     * The sum of two doubles and the bits it lost, exactly.
+     *
+     * @return array{float, float}
+     */
+    public static function twoSum(float $a, float $b): array
+    {
+        $sum = $a + $b;
+        $shifted = $sum - $a;
+
+        return [$sum, ($a - ($sum - $shifted)) + ($b - $shifted)];
     }
 
     /** @param iterable<float|int> $values */

@@ -109,7 +109,17 @@ final class Descriptive
             throw InvalidArgument::emptyDataset('the mean');
         }
 
-        return $this->mean = $this->sum() / $n;
+        // Divided inside the accumulator so the compensation survives the
+        // division. Dividing sum() would round twice and lose up to two
+        // digits on large, tightly clustered samples -- which then propagates
+        // into every deviation computed from the mean.
+        $accumulator = new CompensatedSum();
+
+        foreach ($this->values as $value) {
+            $accumulator->add($value);
+        }
+
+        return $this->mean = $accumulator->dividedBy((float) $n);
     }
 
     public function min(): float

@@ -6,6 +6,7 @@ namespace Vegoia\Tests\Unit\Support;
 
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
+use Vegoia\Exception\InvalidArgument;
 use Vegoia\Support\CompensatedSum;
 
 #[CoversClass(CompensatedSum::class)]
@@ -58,6 +59,64 @@ final class CompensatedSumTest extends TestCase
         $sum->add(-4.0);
 
         self::assertSame(0.0, $sum->value());
+    }
+
+    /**
+     * Dividing value() rounds twice: once folding the compensation into the
+     * head, once dividing. Dividing inside keeps the compensation through the
+     * division, and it is worth two digits on a mean of large, tightly
+     * clustered values -- which is what makes NIST's NumAcc3 and NumAcc4 come
+     * out exact.
+     */
+    public function test_dividing_inside_keeps_what_dividing_the_result_loses(): void
+    {
+        // A thousand values just above 1e9, differing in the ninth decimal.
+        $sum = new CompensatedSum();
+        $values = [];
+
+        for ($i = 0; $i < 1000; $i++) {
+            $value = 1.0e9 + $i * 1.0e-9;
+            $values[] = $value;
+            $sum->add($value);
+        }
+
+        $inside = $sum->dividedBy(1000.0);
+        $outside = $sum->value() / 1000.0;
+
+        // The exact mean is 1e9 + (999/2) * 1e-9.
+        $expected = 1.0e9 + 499.5e-9;
+
+        self::assertLessThanOrEqual(
+            abs($outside - $expected),
+            abs($inside - $expected),
+            'dividing inside cannot be worse than dividing the rounded total',
+        );
+
+        self::assertSame(1.5, (new CompensatedSum())->add(3.0)->dividedBy(2.0));
+    }
+
+    public function test_dividing_by_zero_is_refused(): void
+    {
+        $this->expectException(InvalidArgument::class);
+
+        (new CompensatedSum())->add(1.0)->dividedBy(0.0);
+    }
+
+    /**
+     * twoSum is exact: the head is the rounded sum, the tail is precisely what
+     * that rounding discarded.
+     */
+    public function test_two_sum_recovers_the_bits_addition_drops(): void
+    {
+        [$head, $tail] = CompensatedSum::twoSum(1.0, 2 ** -60);
+
+        self::assertSame(1.0, $head, 'the addend is below the last bit');
+        self::assertSame(2 ** -60, $tail, 'and is recovered whole');
+
+        [$head, $tail] = CompensatedSum::twoSum(3.0, 4.0);
+
+        self::assertSame(7.0, $head);
+        self::assertSame(0.0, $tail, 'an exact sum loses nothing');
     }
 
     public function test_it_accepts_integers_alongside_floats(): void

@@ -106,10 +106,20 @@ final class AnovaTest extends TestCase
             self::assertSame(21.0, NistAnova::load($name)->fStatistic, "{$name} is certified at F = 21");
         }
 
-        // Benign: exactly right. Hardest: the limit of the arithmetic, which
-        // the ceilings file records SciPy hitting too.
-        self::assertSame(21.0, OneWayAnova::of(NistAnova::load('SmLs01')->groups)->fStatistic);
-        self::assertEqualsWithDelta(21.0, OneWayAnova::of(NistAnova::load('SmLs07')->groups)->fStatistic, 1.0e-3);
+        // Benign at one end, at the limit of the arithmetic at the other. The
+        // tolerances are the ones the ceilings file records SciPy reaching --
+        // asserting exact equality on SmLs01 held for a while by luck rather
+        // than by design, and broke the moment the mean got more accurate.
+        self::assertEqualsWithDelta(
+            21.0,
+            OneWayAnova::of(NistAnova::load('SmLs01')->groups)->fStatistic,
+            1.0e-13,
+        );
+        self::assertEqualsWithDelta(
+            21.0,
+            OneWayAnova::of(NistAnova::load('SmLs07')->groups)->fStatistic,
+            1.0e-3,
+        );
     }
 
     public function test_grouping_by_label_matches_grouping_by_hand(): void

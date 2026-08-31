@@ -52,13 +52,25 @@ use Vegoia\Support\CompensatedSum;
  *     worth half a digit in the standard errors, which inherit their accuracy
  *     entirely from this number.
  *
- * Together these land about half a digit ahead of numpy across the NIST linear
- * least squares collection. Filip -- a degree-10 polynomial with a condition
- * number near 1.8e15 -- is the one dataset where LAPACK's blocked
- * factorisation still wins, by roughly half a digit. Column equilibration,
- * column pivoting and a doubled-precision refinement residual were all tried
- * against it; each made it worse. What remains is the factorisation itself,
- * and matching LAPACK there means reimplementing its blocking.
+ * Measured against LAPACK called directly from C, not only against numpy --
+ * numpy is a binding, and the distinction turned out to matter. Mean correct
+ * digits across the NIST linear least squares collection:
+ *
+ *     Vegoia                       11.40
+ *     numpy (via OpenBLAS)         10.93
+ *     OpenBLAS called from C       10.84
+ *     ATLAS LAPACK called from C   10.79
+ *     LAPACK dgelsd (SVD)           9.64
+ *
+ * So there is no single "LAPACK accuracy" to fall short of: ATLAS and OpenBLAS
+ * differ from each other by more than either differs from this code. Filip --
+ * a degree-10 polynomial with a condition number near 1.8e15 -- is the one
+ * dataset where OpenBLAS is ahead (8.55 against 7.96), and ATLAS is behind
+ * both at 7.07.
+ *
+ * Column equilibration, column pivoting and a doubled-precision refinement
+ * residual were each implemented and measured against Filip, and each made it
+ * worse. See tools/lapack/ for the harness.
  *
  * @see G.H. Golub & C.F. Van Loan, Matrix Computations, 4th ed., ch. 5.
  * @see A. Bjorck (1996), Numerical Methods for Least Squares Problems, ch. 2.

@@ -182,12 +182,26 @@ NumAcc3       15.93     9.46    11.93        Wampler5      6     5.93    13.88
 NumAcc4       15.73     8.25    10.73        Filip        11     7.96     7.65
 ```
 
-Across the linear least squares collection this comes out about half a digit
-ahead of numpy: better on 23 of the 33 certified quantities, worse on 5. Filip
-is the one dataset where LAPACK's blocked factorisation still wins, by a
-fraction of a digit -- column equilibration, column pivoting and a
-doubled-precision refinement residual were each tried against it and each made
-it worse.
+The regression figures were checked against LAPACK called directly from C, not
+just against numpy, because numpy is a binding and the difference turned out to
+matter. Mean correct digits across the collection:
+
+| implementation                | mean digits |
+|-------------------------------|-------------|
+| **Vegoia**                    | **11.40**   |
+| numpy (via OpenBLAS)          | 10.93       |
+| OpenBLAS called from C        | 10.84       |
+| ATLAS LAPACK called from C    | 10.79       |
+| LAPACK `dgelsd` (SVD)         | 9.64        |
+
+There is no single "LAPACK accuracy" here to fall short of: ATLAS and OpenBLAS
+differ from each other by more than either differs from this code, and the SVD
+path -- the textbook advice for ill-conditioned problems -- is the worst of the
+lot. Against the OpenBLAS build numpy actually loads, this is ahead on 9 of the
+11 datasets and behind on one, Filip, whose condition number is 1.8e15.
+
+The harness is in `tools/lapack/`, so the comparison can be re-run rather than
+taken on trust.
 
 Where a figure is below 15, the limit is the arithmetic, not the algorithm:
 `10000000.2` is not representable in binary64, so `NumAcc4` is capped near 8

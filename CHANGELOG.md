@@ -2,7 +2,7 @@
 
 Notable changes, newest first. Versions are calendar-based: `YY.M.patch`.
 
-## Unreleased
+## 26.9.2 — 2026-09-01
 
 ### Changed
 

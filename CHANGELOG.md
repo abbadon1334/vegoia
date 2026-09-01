@@ -2,6 +2,31 @@
 
 Notable changes, newest first. Versions are calendar-based: `YY.M.patch`.
 
+## Unreleased
+
+### Added
+
+- **`Vegoia\Stats\MultipleTesting`** with `adjust()` and `rejected()`, and the
+  `Adjustment` enum: Bonferroni, Holm, Benjamini-Hochberg. Twenty p-values at
+  the five per cent level expect one false positive by chance alone, and this
+  library hands out p-values freely, so it has to hand out the thing that makes
+  a family of them readable.
+
+  There is no default procedure. Bonferroni and Holm control the family-wise
+  error rate, Benjamini-Hochberg the false discovery rate, and those are
+  different experiments rather than settings of one.
+
+  Checked against statsmodels on ten families chosen for the shapes that
+  separate the three, plus the properties a caller relies on without stating
+  them: the adjusted family is monotone in the raw p-value, Holm never rejects
+  less than Bonferroni, and Benjamini-Hochberg never adjusts further than Holm.
+
+- `InvalidArgument::notANumber()`. PHP 8.5 warns when NAN is coerced to a
+  string, so a range message reporting a NAN emitted a warning while reporting
+  an error. A NAN is a different failure from a value out of bounds anyway,
+  and it reaches this library from its own output: `Fit::pValue()` returns one
+  for a zero coefficient with a zero standard error.
+
 ## 26.9.3 — 2026-09-01
 
 ### Fixed

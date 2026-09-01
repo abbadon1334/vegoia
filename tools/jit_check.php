@@ -65,6 +65,8 @@ use Vegoia\Stats\Correlation;
 use Vegoia\Stats\Descriptive;
 use Vegoia\Stats\OneWayAnova;
 use Vegoia\Stats\Precision;
+use Vegoia\Stats\Adjustment;
+use Vegoia\Stats\MultipleTesting;
 use Vegoia\Stats\Ranks;
 use Vegoia\Stats\Regression\LeastSquares;
 use Vegoia\Stats\Distribution\ChiSquared;
@@ -180,6 +182,12 @@ echo md5(json_encode([
     'autocorrelation' => $n($stats->autocorrelation(1)),
     'fast_stdDev' => $n($stats->with(Precision::Fast)->stdDev()),
     'fast_autocorrelation' => $n($stats->with(Precision::Fast)->autocorrelation(1)),
+    // multiple testing: a sort by value plus a cumulative pass whose result
+    // depends on the order the JIT chooses to evaluate the comparison in
+    'bonferroni' => $g(MultipleTesting::adjust([0.01, 0.02, 0.03, 0.04, 0.05], Adjustment::Bonferroni)),
+    'holm' => $g(MultipleTesting::adjust([0.05, 0.01, 0.04, 0.02, 0.03], Adjustment::Holm)),
+    'benjamini_hochberg' => $g(MultipleTesting::adjust([0.04, 0.041], Adjustment::BenjaminiHochberg)),
+    'rejected' => MultipleTesting::rejected([0.001, 0.9, 0.02], Adjustment::Holm),
     // ranks: a sort with a tie walk, whose comparisons the JIT specialises
     'midranks' => $g(Ranks::midranks(array_slice($x, 0, 40))),
     'tie_sizes' => Ranks::tieSizes([0.1, 0.1, 0.2, 0.2, 0.2, 0.3]),

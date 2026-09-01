@@ -19,8 +19,10 @@ use Vegoia\Graph\Path\BreadthFirst;
 use Vegoia\Graph\Path\Dijkstra;
 use Vegoia\Rag\MaximalMarginalRelevance;
 use Vegoia\Rag\NearestNeighbours;
+use Vegoia\Stats\Adjustment;
 use Vegoia\Stats\Correlation;
 use Vegoia\Stats\Descriptive;
+use Vegoia\Stats\MultipleTesting;
 use Vegoia\Stats\OneWayAnova;
 use Vegoia\Stats\Regression\LeastSquares;
 
@@ -101,6 +103,29 @@ final class ContractTest extends TestCase
             'different numbers of nodes',
         ];
 
+        yield 'a p-value above one' => [
+            static fn () => MultipleTesting::adjust([0.5, 1.5], Adjustment::Holm),
+            'The p-value at position 1',
+        ];
+        yield 'a negative p-value' => [
+            static fn () => MultipleTesting::adjust([-0.1], Adjustment::Bonferroni),
+            'The p-value at position 0',
+        ];
+        // Not hypothetical: Fit::pValue() returns NAN for a zero coefficient
+        // with a zero standard error, and a NAN handed to usort produces an
+        // arbitrary permutation and a silently wrong family.
+        yield 'a p-value that is not a number' => [
+            static fn () => MultipleTesting::adjust([0.1, NAN], Adjustment::BenjaminiHochberg),
+            'The p-value at position 1 is not a number',
+        ];
+        yield 'a significance level of zero' => [
+            static fn () => MultipleTesting::rejected([0.1], Adjustment::Holm, 0.0),
+            'A significance level',
+        ];
+        yield 'a significance level above one' => [
+            static fn () => MultipleTesting::rejected([0.1], Adjustment::Holm, 1.5),
+            'A significance level',
+        ];
         yield 'a zero autocorrelation lag' => [
             static fn () => Descriptive::of([1.0, 2.0, 3.0])->autocorrelation(0),
             'Autocorrelation lag must lie',
@@ -240,6 +265,15 @@ final class ContractTest extends TestCase
         yield 'a damping factor just above zero' => [static fn () => new PageRank(1.0e-9)];
         yield 'the smallest usable Katz alpha' => [static fn () => new Katz(PHP_FLOAT_EPSILON)];
 
+        yield 'p-values at both boundaries' => [
+            static fn () => MultipleTesting::adjust([0.0, 1.0], Adjustment::BenjaminiHochberg),
+        ];
+        yield 'an empty family' => [
+            static fn () => MultipleTesting::adjust([], Adjustment::Holm),
+        ];
+        yield 'a significance level of exactly one' => [
+            static fn () => MultipleTesting::rejected([0.1], Adjustment::Holm, 1.0),
+        ];
         yield 'the mean of one value' => [static fn () => Descriptive::of([1.0])->mean()];
         yield 'a correlation of two points' => [
             static fn () => Correlation::pearson([1.0, 2.0], [2.0, 1.0]),

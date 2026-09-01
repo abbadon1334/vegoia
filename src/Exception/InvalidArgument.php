@@ -6,6 +6,9 @@ namespace Vegoia\Exception;
 
 use InvalidArgumentException;
 
+use function is_nan;
+use function sprintf;
+
 final class InvalidArgument extends InvalidArgumentException implements VegoiaException
 {
     public static function emptyDataset(string $operation): self
@@ -48,7 +51,42 @@ final class InvalidArgument extends InvalidArgumentException implements VegoiaEx
 
     public static function outOfRange(string $what, float $given, float $low, float $high): self
     {
-        return new self("{$what} must lie in [{$low}, {$high}], {$given} given.");
+        // PHP 8.5 warns when NAN is coerced to a string, and a message that
+        // emits a warning while reporting an error is not much of a message.
+        // A NAN is better described by notANumber() anyway; this only keeps
+        // the general constructor safe for callers that have not separated
+        // the two cases.
+        return new self(sprintf(
+            '%s must lie in [%s, %s], %s given.',
+            $what,
+            self::describe($low),
+            self::describe($high),
+            self::describe($given),
+        ));
+    }
+
+    /**
+     * Not out of range: not a number at all.
+     *
+     * Worth its own constructor because the two are different failures and
+     * only one of them is about bounds. NAN reaches this library from its own
+     * output -- Fit::pValue() returns it for a zero coefficient with a zero
+     * standard error -- so it arrives through ordinary use rather than through
+     * abuse.
+     */
+    public static function notANumber(string $what): self
+    {
+        return new self("{$what} is not a number.");
+    }
+
+    private static function describe(float $value): string
+    {
+        return match (true) {
+            is_nan($value) => 'NAN',
+            $value === INF => 'INF',
+            $value === -INF => '-INF',
+            default => (string) $value,
+        };
     }
 
     /** A special function asked for a value outside the region where it is defined. */

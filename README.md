@@ -150,6 +150,31 @@ the mean carries only the uncertainty of where the line is, while a single new
 observation also has to scatter around it — and that part does not shrink as
 the sample grows.
 
+### Reading a family of p-values instead of one
+
+```php
+use Vegoia\Stats\{MultipleTesting, Adjustment};
+
+$byComparison = ['ab' => 0.01, 'ac' => 0.2, 'bc' => 0.03];
+
+MultipleTesting::adjust($byComparison, Adjustment::BenjaminiHochberg);
+MultipleTesting::rejected($byComparison, Adjustment::Holm, alpha: 0.05);
+```
+
+Twenty p-values at the five per cent level expect one false positive by chance
+alone. This library hands out p-values freely — one per regression
+coefficient, one per analysis of variance — so it also has to hand out the
+thing that makes a family of them readable.
+
+The three procedures are not interchangeable and there is deliberately no
+default. Bonferroni and Holm control the family-wise error rate, the chance of
+even one false positive anywhere; Benjamini-Hochberg controls the false
+discovery rate, the expected share of the rejections that are wrong. Holm
+dominates Bonferroni — same guarantee, never rejects less — so Bonferroni is
+here because reviewers ask for it by name.
+
+Keys survive, so a caller who named their comparisons gets the names back.
+
 ### Distributions, and the functions under them
 
 ```php
@@ -324,6 +349,8 @@ src/
 │   ├── Descriptive.php        Chan-Golub-LeVeque corrected two-pass
 │   ├── Correlation.php        Pearson, Spearman, Kendall tau-b
 │   ├── OneWayAnova.php        with the p-value that makes F readable
+│   ├── MultipleTesting.php    Bonferroni, Holm, Benjamini-Hochberg
+│   ├── Ranks.php              midranks and tie groups, one definition of a tie
 │   ├── SpecialFunction.php    erf, erfc, lgamma, incomplete gamma and beta
 │   ├── Distribution/          Normal, StudentT, ChiSquared, FisherSnedecor
 │   │                          — both tails, and quantiles against either
@@ -692,6 +719,11 @@ NIST source data lives in `resources/fixtures/nist/` and comes from
   information.* The European Physical Journal B 71, 623–630.
 - J.B. Kruskal (1956). *On the shortest spanning subtree of a graph and the
   traveling salesman problem.* Proceedings of the AMS 7(1), 48–50.
+- Y. Benjamini & Y. Hochberg (1995). *Controlling the false discovery rate: a
+  practical and powerful approach to multiple testing.* Journal of the Royal
+  Statistical Society B 57(1), 289–300.
+- S. Holm (1979). *A simple sequentially rejective multiple test procedure.*
+  Scandinavian Journal of Statistics 6(2), 65–70.
 - M.J. Wichura (1988). *Algorithm AS 241: the percentage points of the normal
   distribution.* Applied Statistics 37(3), 477–484.
 - C. Lanczos (1964). *A precision approximation of the gamma function.* SIAM

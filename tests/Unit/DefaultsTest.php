@@ -14,7 +14,9 @@ use Vegoia\Graph\Community\Leiden;
 use Vegoia\Graph\Community\Quality\ConstantPotts;
 use Vegoia\Graph\Community\Quality\ErdosRenyiPotts;
 use Vegoia\Graph\Community\Quality\Modularity;
+use Vegoia\Stats\Adjustment;
 use Vegoia\Stats\Descriptive;
+use Vegoia\Stats\MultipleTesting;
 use Vegoia\Stats\Regression\LeastSquares;
 use Vegoia\Tests\Support\GraphFixture;
 
@@ -171,6 +173,26 @@ final class DefaultsTest extends TestCase
         self::assertNotSame(
             new ConstantPotts(0.05)->of($graph, $partition),
             new ConstantPotts()->of($graph, $partition),
+        );
+    }
+
+    /**
+     * The significance level defaults to five per cent, which is a convention
+     * rather than a fact about the world -- so it is pinned, and pinned twice.
+     */
+    public function test_the_significance_level_defaults_to_five_per_cent(): void
+    {
+        // 0.04 is rejected at 0.05 and not at 0.01, so the default is visible.
+        $family = [0.04];
+
+        self::assertSame(
+            MultipleTesting::rejected($family, Adjustment::Holm, 0.05),
+            MultipleTesting::rejected($family, Adjustment::Holm),
+        );
+
+        self::assertNotSame(
+            MultipleTesting::rejected($family, Adjustment::Holm, 0.01),
+            MultipleTesting::rejected($family, Adjustment::Holm),
         );
     }
 

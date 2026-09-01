@@ -10,6 +10,7 @@ use function array_sum;
 use function array_values;
 use function count;
 
+use Vegoia\Exception\DidNotConverge;
 use Vegoia\Exception\InvalidArgument;
 use Vegoia\Graph\Graph;
 
@@ -58,6 +59,9 @@ final readonly class Hits
 
         $hubs = array_fill(0, $order, 1.0 / $order);
         $authorities = array_fill(0, $order, 1.0 / $order);
+
+        $converged = false;
+        $drift = INF;
 
         for ($iteration = 0; $iteration < $this->maxIterations; $iteration++) {
             // Authority score is what the hubs pointing at you are worth.
@@ -112,8 +116,14 @@ final readonly class Hits
             $hubs = $nextHubs;
 
             if ($drift < $this->tolerance) {
+                $converged = true;
+
                 break;
             }
+        }
+
+        if (! $converged) {
+            throw DidNotConverge::after('HITS', $this->maxIterations, $drift, $this->tolerance);
         }
 
         /**

@@ -618,6 +618,19 @@ networkx `normalized=False`); closeness uses the Wasserman-Faust correction;
 quantiles use R's type 7. Each is documented where it is implemented and enforced
 by a test.
 
+**An iterative method that has not settled raises rather than returns.**
+PageRank, eigenvector centrality, HITS and Katz all refuse if they reach their
+iteration ceiling without converging. The alternative is worse than it looks:
+a power iteration that has stopped early still holds a vector of plausible
+numbers that sums to one, and nothing about it says it is halfway to somewhere
+else. This library had that bug — HITS measured the drift of only one of its
+two coupled vectors, declared victory after a single iteration on a graph
+where the other had not moved, and returned `[0.2, 0.2, 0.4, 0.2, 0]` where
+the answer is `[0, 0, 1, 0, 0]`. On every graph in the test collection, up to
+a thousand nodes and sixteen thousand edges, the defaults converge in a small
+fraction of the iterations allowed, so reaching the ceiling means something
+unusual about the graph rather than something ordinary about its size.
+
 **Degenerate input is refused, not guessed.** Cosine similarity against a zero
 vector raises rather than returning 0.0, because 0.0 asserts orthogonality — a
 claim the data does not support, which would silently rank an empty embedding

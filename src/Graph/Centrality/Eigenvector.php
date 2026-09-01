@@ -9,6 +9,7 @@ use function array_fill;
 use function max;
 use function sqrt;
 
+use Vegoia\Exception\DidNotConverge;
 use Vegoia\Exception\InvalidArgument;
 use Vegoia\Graph\Graph;
 
@@ -87,6 +88,9 @@ final readonly class Eigenvector
         // principal eigenvector rather than an arbitrary one.
         $score = array_fill(0, $order, 1.0 / sqrt((float) $order));
 
+        $converged = false;
+        $drift = INF;
+
         for ($iteration = 0; $iteration < $this->maxIterations; $iteration++) {
             $next = array_fill(0, $order, 0.0);
 
@@ -118,8 +122,14 @@ final readonly class Eigenvector
             $score = $next;
 
             if ($drift < $order * $this->tolerance) {
+                $converged = true;
+
                 break;
             }
+        }
+
+        if (! $converged) {
+            throw DidNotConverge::after('Eigenvector centrality', $this->maxIterations, $drift, $order * $this->tolerance);
         }
 
         /** @var list<float> $score */

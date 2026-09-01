@@ -9,6 +9,7 @@ use function array_fill;
 use function max;
 use function sqrt;
 
+use Vegoia\Exception\DidNotConverge;
 use Vegoia\Exception\InvalidArgument;
 use Vegoia\Graph\Graph;
 
@@ -87,7 +88,13 @@ final readonly class Katz
 
         $vector = array_fill(0, $order, 1.0 / sqrt((float) $order));
         $eigenvalue = 0.0;
+        $converged = false;
+        $movement = INF;
 
+        // A thousand steps of a shifted power iteration. Shifting is what makes
+        // that enough: without it the convergence rate is the ratio of the two
+        // largest eigenvalues in absolute value, which is 1 on a bipartite
+        // graph and never converges at all.
         for ($iteration = 0; $iteration < 1000; $iteration++) {
             $next = array_fill(0, $order, 0.0);
 
@@ -120,9 +127,27 @@ final readonly class Katz
             $eigenvalue = $norm - $shift;
             $vector = $next;
 
-            if (abs($eigenvalue - $previous) < 1.0e-12 * max(1.0, abs($eigenvalue))) {
+            $movement = abs($eigenvalue - $previous);
+
+            if ($movement < 1.0e-12 * max(1.0, abs($eigenvalue))) {
+                $converged = true;
+
                 break;
             }
+        }
+
+        // Refusing rather than returning the estimate it happened to reach.
+        // This number decides whether the caller's alpha is inside the radius
+        // of convergence, so an estimate that has not settled can wave through
+        // an alpha whose series diverges -- and the scores that come back from
+        // that are not wrong by a little.
+        if (! $converged) {
+            throw DidNotConverge::after(
+                "Katz's estimate of the largest eigenvalue",
+                1000,
+                $movement,
+                1.0e-12 * max(1.0, abs($eigenvalue)),
+            );
         }
 
         return abs($eigenvalue);
@@ -168,6 +193,9 @@ final readonly class Katz
 
         $score = array_fill(0, $order, 0.0);
 
+        $converged = false;
+        $drift = INF;
+
         for ($iteration = 0; $iteration < $this->maxIterations; $iteration++) {
             $next = array_fill(0, $order, $this->beta);
 
@@ -195,8 +223,14 @@ final readonly class Katz
             $score = $next;
 
             if ($drift < $order * $this->tolerance) {
+                $converged = true;
+
                 break;
             }
+        }
+
+        if (! $converged) {
+            throw DidNotConverge::after('Katz centrality', $this->maxIterations, $drift, $order * $this->tolerance);
         }
 
         $norm = 0.0;

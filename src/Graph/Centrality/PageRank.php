@@ -7,6 +7,7 @@ namespace Vegoia\Graph\Centrality;
 use function abs;
 use function array_fill;
 
+use Vegoia\Exception\DidNotConverge;
 use Vegoia\Exception\InvalidArgument;
 use Vegoia\Graph\Graph;
 
@@ -109,6 +110,9 @@ final readonly class PageRank
         // there converges sooner without changing the limit.
         $score = $teleportTo;
 
+        $converged = false;
+        $drift = INF;
+
         for ($iteration = 0; $iteration < $this->maxIterations; $iteration++) {
             $dangling = 0.0;
 
@@ -158,8 +162,14 @@ final readonly class PageRank
 
             // Scaled by order so the criterion means the same on any graph.
             if ($drift < $order * $this->tolerance) {
+                $converged = true;
+
                 break;
             }
+        }
+
+        if (! $converged) {
+            throw DidNotConverge::after('PageRank', $this->maxIterations, $drift, $order * $this->tolerance);
         }
 
         /** @var list<float> $score */

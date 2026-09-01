@@ -2,6 +2,34 @@
 
 Notable changes, newest first. Versions are calendar-based: `YY.M.patch`.
 
+## Unreleased
+
+### Changed
+
+- **Iterative methods now raise instead of returning an unsettled answer.**
+  PageRank, eigenvector centrality, HITS and Katz throw `DidNotConverge` if
+  they reach their iteration ceiling without converging, where they used to
+  return whatever they were holding. Katz already refused for its own
+  divergence case, and the rest disagreed with it — the same class of failure
+  answered two different ways. Katz's internal estimate of the largest
+  eigenvalue refuses too: that number decides whether the caller's alpha is
+  inside the radius of convergence, so an estimate that has not settled can
+  wave through an alpha whose series diverges.
+
+  Nothing in the test collection provokes it: on every graph, up to a thousand
+  nodes and sixteen thousand edges, the defaults converge in a small fraction
+  of the iterations allowed. Code that was getting a correct answer keeps
+  getting it.
+
+### Fixed
+
+- Seven skipped tests were skipping on a false claim — that `predict()` cannot
+  take a polynomial fit's predictors, which the test in the next file does.
+  Nine more were skipped because "Dijkstra reduces to BFS on an unweighted
+  graph", which is true of the mathematics and says nothing about whether this
+  implementation does. Both now run. 23 skips down to 5, and 541 more
+  assertions for no new test methods.
+
 ## 26.9.1 — 2026-09-01
 
 First release.

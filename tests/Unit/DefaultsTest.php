@@ -5,6 +5,11 @@ declare(strict_types=1);
 namespace Vegoia\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
+use Vegoia\Exception\DidNotConverge;
+use Vegoia\Graph\Centrality\Eigenvector;
+use Vegoia\Graph\Centrality\Hits;
+use Vegoia\Graph\Centrality\Katz;
+use Vegoia\Graph\Centrality\PageRank;
 use Vegoia\Graph\Community\Leiden;
 use Vegoia\Graph\Community\Quality\ConstantPotts;
 use Vegoia\Graph\Community\Quality\ErdosRenyiPotts;
@@ -204,28 +209,69 @@ final class DefaultsTest extends TestCase
     }
 
     /**
-     * The iteration ceilings are not defaults anybody passes, and they must
-     * not be reachable on an ordinary graph -- an algorithm that stopped
-     * because it ran out of iterations rather than because it converged is
-     * reporting whatever it had at the time.
+     * The iteration ceilings are not defaults anybody passes, and the default
+     * must not be what ends the loop -- an algorithm that stopped because it
+     * ran out of iterations rather than because it settled is reporting
+     * whatever it happened to be holding.
      *
-     * Checked by lowering the ceiling until the answer changes: if a limit of
-     * two gives the same result as the default, the default is not what is
-     * ending the loop.
+     * Two halves. A ceiling of two is refused outright, which is how this is
+     * checked now: starving the search used to return a plausible vector and
+     * the test compared it with the converged one, which was a weaker
+     * question and a worse contract. And the default reaches the same answer
+     * a much larger ceiling does, which is what says the default is generous
+     * rather than merely large.
      */
-    public function test_the_iteration_ceilings_are_not_what_stops_the_search(): void
+    public function test_the_iteration_ceiling_is_not_what_stops_the_search(): void
     {
         $graph = GraphFixture::load('lesmis')->graph();
 
-        $converged = new \Vegoia\Graph\Centrality\PageRank()->of($graph);
-        $starved = new \Vegoia\Graph\Centrality\PageRank(0.85, 1.0e-12, 2)->of($graph);
-
-        self::assertNotEquals($starved, $converged, 'two iterations must not reach the answer');
-
-        $generous = new \Vegoia\Graph\Centrality\PageRank(0.85, 1.0e-12, 1000)->of($graph);
+        $converged = new PageRank()->of($graph);
+        $generous = new PageRank(maxIterations: 100_000)->of($graph);
 
         foreach ($converged as $node => $rank) {
             self::assertEqualsWithDelta($generous[$node], $rank, 1.0e-15, "node {$node}");
+        }
+
+        $this->expectException(DidNotConverge::class);
+        $this->expectExceptionMessageMatches('/PageRank did not converge in 2 iterations/');
+
+        new PageRank(maxIterations: 2)->of($graph);
+    }
+
+    /**
+     * Every iterative method refuses rather than returning what it was
+     * holding when the iterations ran out.
+     *
+     * Katz already did this for its own divergence case, and the rest
+     * disagreed with it: same class of failure, opposite answer. They agree
+     * now, and this is the test that keeps them agreeing.
+     */
+    public function test_no_iterative_method_returns_an_unsettled_answer(): void
+    {
+        $graph = GraphFixture::load('lesmis')->graph();
+        $directed = GraphFixture::directed('hub_and_authority')->directedGraph();
+
+        $starved = [
+            'PageRank' => static fn () => new PageRank(maxIterations: 2)->of($graph),
+            'Eigenvector' => static fn () => new Eigenvector(maxIterations: 2)->of($graph),
+            'HITS' => static fn () => new Hits(maxIterations: 2)->of($directed),
+            // Below 1 / lambda_max for Les Misérables, which is 0.0154 --
+            // above it Katz refuses for a different and equally good reason,
+            // and this test is about the iteration ceiling.
+            'Katz' => static fn () => new Katz(alpha: 0.014, maxIterations: 2)->of($graph),
+        ];
+
+        foreach ($starved as $name => $call) {
+            try {
+                $call();
+                self::fail("{$name} returned an answer after two iterations instead of refusing");
+            } catch (DidNotConverge $e) {
+                self::assertStringContainsString(
+                    'did not converge in 2 iterations',
+                    $e->getMessage(),
+                    $name,
+                );
+            }
         }
     }
 }

@@ -124,8 +124,10 @@ final readonly class ChiSquaredTest
                     // statistic where the answer is zero: measured on a table
                     // whose every difference is 0.244, it gives 0.0232 against
                     // the correct 0. SciPy carries this as a fixed bug.
-                    $shift = min(0.5, abs($difference));
-                    $difference = $difference <=> 0.0 ? $difference - ($difference <=> 0.0) * $shift : 0.0;
+                    // Signum times the clamped shift. When the difference is
+                    // already zero the signum is zero and nothing moves, so
+                    // there is no special case to write.
+                    $difference -= ($difference <=> 0.0) * min(0.5, abs($difference));
                 }
 
                 // Cell by cell, never the algebraically equal sum(o^2/e) - N.

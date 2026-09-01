@@ -215,6 +215,30 @@ final class ReciprocalRankFusionTest extends TestCase
         self::assertEqualsWithDelta(1.0 / 31.0, $fused['b'], 1.0e-15);
     }
 
+    /**
+     * A document listed twice by one retriever is credited once, and what
+     * follows it in that ranking is still read.
+     *
+     * The second half is the part a test can miss: with the duplicate last,
+     * skipping it and abandoning the rest of the ranking are indistinguishable,
+     * and the fixture used to have it last. Mutation testing turned the skip
+     * into a break and nothing failed.
+     */
+    public function test_a_duplicate_is_skipped_without_abandoning_the_ranking(): void
+    {
+        $fused = ReciprocalRankFusion::fuse([['a', 'b', 'a', 'c', 'd'], ['b', 'a']]);
+
+        self::assertSame(['a', 'b', 'c', 'd'], array_keys($fused));
+
+        // 'a' is credited for rank 1 only, not for ranks 1 and 3.
+        self::assertEqualsWithDelta(1.0 / 61.0 + 1.0 / 62.0, $fused['a'], 1.0e-15);
+
+        // And 'c' and 'd', which come after the duplicate, are still scored --
+        // at ranks 4 and 5, the positions they hold in the ranking as written.
+        self::assertEqualsWithDelta(1.0 / 64.0, $fused['c'], 1.0e-15);
+        self::assertEqualsWithDelta(1.0 / 65.0, $fused['d'], 1.0e-15);
+    }
+
     public function test_no_rankings_gives_no_result(): void
     {
         self::assertSame([], ReciprocalRankFusion::fuse([]));

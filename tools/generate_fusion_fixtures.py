@@ -46,7 +46,10 @@ CASES = {
         "rankings": [["a", "b"], ["c", "d"], ["b", "d", "a"]],
         "k": 60,
     },
-    "duplicate_within_one_ranking": {"rankings": [["a", "b", "a"], ["b", "a"]], "k": 60},
+    # The duplicate sits in the middle on purpose. With it last, skipping it
+    # and abandoning the rest of the ranking are the same thing, and a test
+    # built on that cannot tell them apart.
+    "duplicate_within_one_ranking": {"rankings": [["a", "b", "a", "c", "d"], ["b", "a"]], "k": 60},
     "one_empty_ranking": {"rankings": [["a", "b"], [], ["b", "a"]], "k": 60},
     # k = 0 is the pure reciprocal rank, where the first place is worth
     # everything; large k flattens towards a plain vote.

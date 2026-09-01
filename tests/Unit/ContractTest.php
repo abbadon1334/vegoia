@@ -143,6 +143,10 @@ final class ContractTest extends TestCase
             static fn () => TTest::welch([1.0, 2.0], [3.0, 4.0])->confidenceInterval(1.0),
             'A confidence level',
         ];
+        yield 'a confidence level of zero' => [
+            static fn () => TTest::welch([1.0, 2.0], [3.0, 4.0])->confidenceInterval(0.0),
+            'A confidence level',
+        ];
         yield 'Mann-Whitney on an empty sample' => [
             static fn () => MannWhitneyU::of([], [1.0, 2.0]),
             'first sample',
@@ -334,6 +338,13 @@ final class ContractTest extends TestCase
         ];
         yield 'a t-test on two samples of two' => [
             static fn () => TTest::welch([1.0, 2.0], [3.0, 5.0]),
+        ];
+        yield 'a confidence level just inside either end' => [
+            static function (): array {
+                $test = TTest::welch([1.0, 2.0], [3.0, 5.0]);
+
+                return [$test->confidenceInterval(1.0e-9), $test->confidenceInterval(0.999999999)];
+            },
         ];
         yield 'Mann-Whitney on samples of one' => [
             static fn () => MannWhitneyU::of([1.0], [2.0]),

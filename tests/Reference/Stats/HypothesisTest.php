@@ -245,6 +245,45 @@ final class HypothesisTest extends TestCase
         self::assertLessThanOrEqual($student->degreesOfFreedom + 1.0e-9, $welch->degreesOfFreedom, $name);
     }
 
+    /**
+     * Which variant produced the result is recorded on it, so a number that
+     * has been passed around can still say what it assumed.
+     *
+     * @param array<string, mixed> $entry
+     */
+    #[DataProvider('samples')]
+    public function test_each_variant_says_which_one_it_is(string $name, array $entry): void
+    {
+        /** @var array{x: list<float>, y: list<float>} $entry */
+        self::assertTrue(TTest::student($entry['x'], $entry['y'])->pooled, "{$name}: student pools");
+        self::assertFalse(TTest::welch($entry['x'], $entry['y'])->pooled, "{$name}: welch does not");
+    }
+
+    /**
+     * An exactly determined difference is infinitely many standard errors from
+     * zero, not an error -- and when the difference is zero as well it is
+     * undefined rather than infinite. Fit::tStatistic() takes the same
+     * position, and this is the case that reaches it: two constant samples.
+     */
+    public function test_a_zero_standard_error_is_infinite_rather_than_an_error(): void
+    {
+        $apart = TTest::welch([5.0, 5.0, 5.0], [3.0, 3.0, 3.0]);
+
+        self::assertSame(INF, $apart->statistic);
+        self::assertSame(0.0, $apart->pValue());
+        self::assertSame(0.0, $apart->standardError);
+
+        $identical = TTest::welch([5.0, 5.0, 5.0], [5.0, 5.0, 5.0]);
+
+        self::assertNan($identical->statistic, 'zero over zero is undefined, not infinite');
+        self::assertNan($identical->pValue());
+
+        // The Satterthwaite denominator vanishes with both variances, and
+        // falling back on the pooled degrees of freedom keeps the object
+        // constructible rather than dividing by zero to build it.
+        self::assertSame(4.0, $identical->degreesOfFreedom);
+    }
+
     /** @param array<string, mixed> $entry */
     #[DataProvider('rankSamples')]
     public function test_the_mann_whitney_statistic_matches_scipy(string $name, array $entry): void
@@ -337,6 +376,24 @@ final class HypothesisTest extends TestCase
 
         self::assertLessThanOrEqual(1.0, $test->tieCorrection, $name);
         self::assertGreaterThan(0.0, $test->tieCorrection, $name);
+    }
+
+    /**
+     * An empty group is dropped, not refused and not counted.
+     *
+     * OneWayAnova::of() does the same, and the two should be swappable at the
+     * call site. Nothing covered it: mutation testing removed the filter and
+     * every test still passed.
+     */
+    public function test_an_empty_group_is_dropped(): void
+    {
+        $without = KruskalWallis::of([[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]]);
+        $with = KruskalWallis::of([[1.0, 2.0, 3.0], [], [4.0, 5.0, 6.0]]);
+
+        self::assertSame($without->groups, $with->groups, 'the empty group was counted');
+        self::assertSame($without->degreesOfFreedom, $with->degreesOfFreedom);
+        self::assertSame($without->statistic, $with->statistic);
+        self::assertSame($without->observations, $with->observations);
     }
 
     /**

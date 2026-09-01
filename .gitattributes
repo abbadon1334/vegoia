@@ -1,0 +1,23 @@
+# What ships when someone runs `composer require abbadon1334/vegoia`.
+#
+# The library is 460K of source. The repository is 3.1M, and the difference is
+# almost entirely NIST datasets and golden fixtures -- 1.4M of certified values
+# and reference graphs that exist so the test suite can prove its claims. They
+# belong in the repository and nowhere near a vendor directory: nothing in
+# src/ reads them, and shipping them would put six times the library's own
+# weight into every install.
+#
+# Everything excluded here is still one `git clone` away, which is where you
+# want it if you are checking the accuracy claims rather than using the code.
+
+/.github            export-ignore
+/.gitattributes     export-ignore
+/.gitignore         export-ignore
+/examples           export-ignore
+/infection.json5    export-ignore
+/phpstan.neon       export-ignore
+/phpunit.xml        export-ignore
+/pint.json          export-ignore
+/resources          export-ignore
+/tests              export-ignore
+/tools              export-ignore

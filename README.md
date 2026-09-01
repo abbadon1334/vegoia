@@ -686,4 +686,4 @@ NIST source data lives in `resources/fixtures/nist/` and comes from
 
 ## Licence
 
-MIT.
+MIT. See [LICENSE](LICENSE).

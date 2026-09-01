@@ -154,6 +154,10 @@ final class StructureTest extends TestCase
      * uses, so agreeing means the characterisation was applied correctly
      * rather than that two copies of it agree.
      *
+     * It runs on every fixture. It used to skip anything above a hundred
+     * edges as "quadratic", which was a guess rather than a measurement: the
+     * largest here is Les Misérables at 254 edges and it takes 106 ms.
+     *
      * @param array<string, mixed> $entry
      */
     #[DataProvider('undirectedGraphs')]
@@ -163,10 +167,6 @@ final class StructureTest extends TestCase
     ): void {
         $fixture = GraphFixture::load($name);
         $graph = $fixture->graph();
-
-        if ($graph->size() > 100) {
-            self::markTestSkipped("{$name}: rebuilding the graph once per edge is quadratic");
-        }
 
         $before = Connectivity::components($graph)->count();
         $bridges = array_map(

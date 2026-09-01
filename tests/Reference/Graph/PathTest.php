@@ -47,12 +47,8 @@ final class PathTest extends TestCase
     {
         $fixture = GraphFixture::load($name);
 
-        /** @var array{paths: array{dijkstra_from_0?: list<float>}} $expected */
+        /** @var array{paths: array{dijkstra_from_0: list<float>}} $expected */
         $expected = $fixture->expected;
-
-        if (! isset($expected['paths']['dijkstra_from_0'])) {
-            self::markTestSkipped("{$name} is unweighted, so Dijkstra reduces to BFS");
-        }
 
         $computed = Dijkstra::distancesFrom($fixture->graph(), 0);
 

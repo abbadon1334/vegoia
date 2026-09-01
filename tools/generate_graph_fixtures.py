@@ -188,12 +188,19 @@ def shortest_paths(G: nx.Graph, n: int) -> dict:
     for node, d in unweighted.items():
         row[key[node]] = float(d)
     out = {"bfs_from_0": row}
-    if any("weight" in d for _, _, d in G.edges(data=True)):
-        w = dict(nx.single_source_dijkstra_path_length(G, inv[0], weight="weight"))
-        wrow = [-1.0] * n
-        for node, d in w.items():
-            wrow[key[node]] = float(d)
-        out["dijkstra_from_0"] = wrow
+
+    # Emitted for every graph, weighted or not. On an unweighted graph the two
+    # rows are equal -- NetworkX treats a missing weight as 1 -- and that is
+    # the reason to record it rather than the reason to skip it: "Dijkstra
+    # reduces to BFS here" is a statement about the mathematics, not about
+    # whether this implementation of Dijkstra does. HITS was wrong for months
+    # behind exactly that kind of reasoning.
+    w = dict(nx.single_source_dijkstra_path_length(G, inv[0], weight="weight"))
+    wrow = [-1.0] * n
+    for node, d in w.items():
+        wrow[key[node]] = float(d)
+    out["dijkstra_from_0"] = wrow
+
     return out
 
 

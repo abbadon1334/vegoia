@@ -298,13 +298,24 @@ final class InferenceTest extends TestCase
         array $entry,
     ): void {
         $set = NistRegression::load($name);
+        $fit = self::fitFromData($name);
+
+        // A polynomial fit has one predictor and several parameters, so the
+        // row predict() wants is that predictor's powers. Skipping these
+        // datasets instead -- which this test did, on the stated grounds that
+        // "predict() takes the raw predictor" -- was wrong twice over: the
+        // claim is false, and it quietly removed the seven hardest cases in
+        // the collection from a check they pass.
+        $predictors = $set->predictors[0];
 
         if ($set->isPolynomial()) {
-            self::markTestSkipped("{$name}: predict() takes the raw predictor for a polynomial fit");
-        }
+            $x = $predictors[0];
+            $predictors = [];
 
-        $fit = self::fitFromData($name);
-        $predictors = $set->predictors[0];
+            for ($power = 1; $power <= $set->degree(); $power++) {
+                $predictors[] = $x ** $power;
+            }
+        }
 
         [$meanLow, $meanHigh] = $fit->meanResponseInterval($predictors);
         [$low, $high] = $fit->predictionInterval($predictors);

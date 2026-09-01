@@ -42,6 +42,34 @@ Notable changes, newest first. Versions are calendar-based: `YY.M.patch`.
   O(1): measured against exact rationals it holds 11.95 digits at N = 60000
   where the centred form holds 13.54.
 
+- **`Vegoia\Graph\Distance`** and **`Vegoia\Graph\Assortativity`**:
+  eccentricity, diameter, radius, mean shortest path length, and Newman's
+  degree assortativity.
+
+  One object rather than four functions, because one sweep produces all four
+  and it is the most expensive thing in the library -- 1.4 seconds on a
+  thousand nodes -- so four static entry points would run it four times.
+
+  NetworkX raises on a disconnected graph; this returns `INF`, which is the
+  answer rather than a guess. The eccentricities are measured within each
+  node's own component and so stay finite, which is what makes the result
+  usable on the two fixtures that are disconnected, one of them the largest.
+
+  Assortativity refuses a regular graph, where the correlation is 0/0 --
+  `Correlation::pearson` already refuses a sample with no variation and this is
+  literally that. A self-loop contributes no pair of endpoints; all three
+  readings of that differ and NetworkX agrees with neither obvious one, so it
+  is pinned by hand against a direct Pearson computation.
+
+- **`Vegoia\Rag\ReciprocalRankFusion`**, for combining a vector ranking with
+  a keyword one. A BM25 score and a cosine similarity are not comparable and do
+  not become comparable by rescaling, so the scores are thrown away and only
+  the positions kept.
+
+  There is no canonical implementation to check against -- LangChain,
+  Elasticsearch and Weaviate read the conventions differently -- so the fixture
+  computes the scores as exact rationals instead.
+
 - `InvalidArgument::notANumber()`. PHP 8.5 warns when NAN is coerced to a
   string, so a range message reporting a NAN emitted a warning while reporting
   an error. A NAN is a different failure from a value out of bounds anyway,

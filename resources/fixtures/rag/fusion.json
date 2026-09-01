@@ -1,0 +1,370 @@
+{
+ "cases": {
+  "consensus_beats_enthusiasm": {
+   "fused": {
+    "exact": [
+     "185/3782",
+     "187/3906",
+     "1/61",
+     "1/62",
+     "1/63"
+    ],
+    "keys": [
+     "b",
+     "c",
+     "x",
+     "y",
+     "z"
+    ],
+    "scores": [
+     0.04891591750396616,
+     0.04787506400409626,
+     0.01639344262295082,
+     0.016129032258064516,
+     0.015873015873015872
+    ]
+   },
+   "k": 60,
+   "rankings": [
+    [
+     "x",
+     "b",
+     "c"
+    ],
+    [
+     "b",
+     "y",
+     "c"
+    ],
+    [
+     "b",
+     "c",
+     "z"
+    ]
+   ]
+  },
+  "duplicate_within_one_ranking": {
+   "fused": {
+    "exact": [
+     "123/3782",
+     "123/3782"
+    ],
+    "keys": [
+     "a",
+     "b"
+    ],
+    "scores": [
+     0.03252247488101533,
+     0.03252247488101533
+    ]
+   },
+   "k": 60,
+   "rankings": [
+    [
+     "a",
+     "b",
+     "a"
+    ],
+    [
+     "b",
+     "a"
+    ]
+   ]
+  },
+  "integer_keys": {
+   "fused": {
+    "exact": [
+     "123/3782",
+     "124/3843",
+     "1/62"
+    ],
+    "keys": [
+     10,
+     30,
+     20
+    ],
+    "scores": [
+     0.03252247488101533,
+     0.032266458495966696,
+     0.016129032258064516
+    ]
+   },
+   "k": 60,
+   "rankings": [
+    [
+     10,
+     20,
+     30
+    ],
+    [
+     30,
+     10
+    ]
+   ]
+  },
+  "k_large": {
+   "fused": {
+    "exact": [
+     "2003/1003002",
+     "2004/1004003",
+     "2005/1005006"
+    ],
+    "keys": [
+     "b",
+     "a",
+     "c"
+    ],
+    "scores": [
+     0.001997004991016967,
+     0.0019960099720817566,
+     0.0019950129650967256
+    ]
+   },
+   "k": 1000,
+   "rankings": [
+    [
+     "a",
+     "b",
+     "c"
+    ],
+    [
+     "b",
+     "c",
+     "a"
+    ]
+   ]
+  },
+  "k_zero": {
+   "fused": {
+    "exact": [
+     "3/2",
+     "4/3",
+     "5/6"
+    ],
+    "keys": [
+     "b",
+     "a",
+     "c"
+    ],
+    "scores": [
+     1.5,
+     1.3333333333333333,
+     0.8333333333333334
+    ]
+   },
+   "k": 0,
+   "rankings": [
+    [
+     "a",
+     "b",
+     "c"
+    ],
+    [
+     "b",
+     "c",
+     "a"
+    ]
+   ]
+  },
+  "one_empty_ranking": {
+   "fused": {
+    "exact": [
+     "123/3782",
+     "123/3782"
+    ],
+    "keys": [
+     "a",
+     "b"
+    ],
+    "scores": [
+     0.03252247488101533,
+     0.03252247488101533
+    ]
+   },
+   "k": 60,
+   "rankings": [
+    [
+     "a",
+     "b"
+    ],
+    [],
+    [
+     "b",
+     "a"
+    ]
+   ]
+  },
+  "one_ranking": {
+   "fused": {
+    "exact": [
+     "1/61",
+     "1/62",
+     "1/63"
+    ],
+    "keys": [
+     "a",
+     "b",
+     "c"
+    ],
+    "scores": [
+     0.01639344262295082,
+     0.016129032258064516,
+     0.015873015873015872
+    ]
+   },
+   "k": 60,
+   "rankings": [
+    [
+     "a",
+     "b",
+     "c"
+    ]
+   ]
+  },
+  "partial_overlap": {
+   "fused": {
+    "exact": [
+     "123/3782",
+     "124/3843",
+     "1/31",
+     "1/61"
+    ],
+    "keys": [
+     "b",
+     "a",
+     "d",
+     "c"
+    ],
+    "scores": [
+     0.03252247488101533,
+     0.032266458495966696,
+     0.03225806451612903,
+     0.01639344262295082
+    ]
+   },
+   "k": 60,
+   "rankings": [
+    [
+     "a",
+     "b"
+    ],
+    [
+     "c",
+     "d"
+    ],
+    [
+     "b",
+     "d",
+     "a"
+    ]
+   ]
+  },
+  "same_ranks_different_order": {
+   "fused": {
+    "exact": [
+     "11531/238266",
+     "123/3782",
+     "124/3843",
+     "125/3906"
+    ],
+    "keys": [
+     "a",
+     "b",
+     "p",
+     "q"
+    ],
+    "scores": [
+     0.04839549075403121,
+     0.03252247488101533,
+     0.032266458495966696,
+     0.03200204813108039
+    ]
+   },
+   "k": 60,
+   "rankings": [
+    [
+     "a",
+     "b",
+     "p"
+    ],
+    [
+     "b",
+     "a",
+     "q"
+    ],
+    [
+     "p",
+     "q",
+     "a"
+    ]
+   ]
+  },
+  "two_agreeing": {
+   "fused": {
+    "exact": [
+     "2/61",
+     "1/31",
+     "2/63"
+    ],
+    "keys": [
+     "a",
+     "b",
+     "c"
+    ],
+    "scores": [
+     0.03278688524590164,
+     0.03225806451612903,
+     0.031746031746031744
+    ]
+   },
+   "k": 60,
+   "rankings": [
+    [
+     "a",
+     "b",
+     "c"
+    ],
+    [
+     "a",
+     "b",
+     "c"
+    ]
+   ]
+  },
+  "two_disagreeing": {
+   "fused": {
+    "exact": [
+     "124/3843",
+     "124/3843",
+     "1/31"
+    ],
+    "keys": [
+     "a",
+     "c",
+     "b"
+    ],
+    "scores": [
+     0.032266458495966696,
+     0.032266458495966696,
+     0.03225806451612903
+    ]
+   },
+   "k": 60,
+   "rankings": [
+    [
+     "a",
+     "b",
+     "c"
+    ],
+    [
+     "c",
+     "b",
+     "a"
+    ]
+   ]
+  }
+ },
+ "generator": "exact rational arithmetic (fractions.Fraction), rounded once at the end",
+ "note": "There is no canonical implementation to generate against -- LangChain, Elasticsearch and Weaviate read the conventions differently -- so the truth is computed exactly instead. Ranks start at 1; a document absent from a ranking contributes nothing; the first occurrence within one ranking wins; ties break on the key ascending, matching NearestNeighbours.",
+ "regenerate": "python3 tools/generate_fusion_fixtures.py"
+}

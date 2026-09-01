@@ -227,15 +227,118 @@
  "undirected": {
   "complete_8": {
    "articulation_points": [],
-   "bridges": []
+   "bridges": [],
+   "degree_assortativity": null,
+   "distance": {
+    "average_shortest_path_length": 1.0,
+    "components": 1,
+    "diameter": 1.0,
+    "eccentricity": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "largest_component": {
+     "average_shortest_path_length": 1.0,
+     "diameter": 1.0,
+     "nodes": 8,
+     "radius": 1.0
+    },
+    "radius": 1.0,
+    "reachable_pairs": 56,
+    "total_distance": 56.0
+   }
   },
   "davis": {
    "articulation_points": [],
-   "bridges": []
+   "bridges": [],
+   "degree_assortativity": -0.33699793714355053,
+   "distance": {
+    "average_shortest_path_length": 2.306451612903226,
+    "components": 1,
+    "diameter": 4.0,
+    "eccentricity": [
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     3.0,
+     3.0,
+     3.0,
+     3.0,
+     4.0,
+     3.0,
+     4.0,
+     4.0,
+     3.0,
+     4.0,
+     4.0,
+     4.0,
+     3.0,
+     4.0,
+     4.0,
+     3.0,
+     3.0,
+     3.0,
+     3.0
+    ],
+    "largest_component": {
+     "average_shortest_path_length": 2.306451612903226,
+     "diameter": 4.0,
+     "nodes": 32,
+     "radius": 3.0
+    },
+    "radius": 3.0,
+    "reachable_pairs": 992,
+    "total_distance": 2288.0
+   }
   },
   "disjoint_cliques": {
    "articulation_points": [],
-   "bridges": []
+   "bridges": [],
+   "degree_assortativity": 0.9999999999999951,
+   "distance": {
+    "average_shortest_path_length": null,
+    "components": 3,
+    "diameter": null,
+    "eccentricity": [
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0,
+     1.0
+    ],
+    "largest_component": {
+     "average_shortest_path_length": 1.0,
+     "diameter": 1.0,
+     "nodes": 5,
+     "radius": 1.0
+    },
+    "radius": null,
+    "reachable_pairs": 38,
+    "total_distance": 38.0
+   }
   },
   "florentine": {
    "articulation_points": [
@@ -265,11 +368,76 @@
      9,
      12
     ]
-   ]
+   ],
+   "degree_assortativity": -0.37483787289234866,
+   "distance": {
+    "average_shortest_path_length": 2.4857142857142858,
+    "components": 1,
+    "diameter": 5.0,
+    "eccentricity": [
+     4.0,
+     3.0,
+     4.0,
+     5.0,
+     4.0,
+     4.0,
+     4.0,
+     5.0,
+     3.0,
+     5.0,
+     5.0,
+     3.0,
+     4.0,
+     4.0,
+     3.0
+    ],
+    "largest_component": {
+     "average_shortest_path_length": 2.4857142857142858,
+     "diameter": 5.0,
+     "nodes": 15,
+     "radius": 3.0
+    },
+    "radius": 3.0,
+    "reachable_pairs": 210,
+    "total_distance": 522.0
+   }
   },
   "grid_4x4": {
    "articulation_points": [],
-   "bridges": []
+   "bridges": [],
+   "degree_assortativity": 0.29411764705882526,
+   "distance": {
+    "average_shortest_path_length": 2.6666666666666665,
+    "components": 1,
+    "diameter": 6.0,
+    "eccentricity": [
+     6.0,
+     5.0,
+     5.0,
+     6.0,
+     5.0,
+     4.0,
+     4.0,
+     5.0,
+     5.0,
+     4.0,
+     4.0,
+     5.0,
+     6.0,
+     5.0,
+     5.0,
+     6.0
+    ],
+    "largest_component": {
+     "average_shortest_path_length": 2.6666666666666665,
+     "diameter": 6.0,
+     "nodes": 16,
+     "radius": 4.0
+    },
+    "radius": 4.0,
+    "reachable_pairs": 240,
+    "total_distance": 640.0
+   }
   },
   "lesmis": {
    "articulation_points": [
@@ -355,7 +523,101 @@
      68,
      73
     ]
-   ]
+   ],
+   "degree_assortativity": -0.16522513442237025,
+   "distance": {
+    "average_shortest_path_length": 2.6411483253588517,
+    "components": 1,
+    "diameter": 5.0,
+    "eccentricity": [
+     4.0,
+     3.0,
+     4.0,
+     4.0,
+     4.0,
+     5.0,
+     3.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     5.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     5.0,
+     5.0,
+     4.0,
+     5.0,
+     5.0,
+     3.0,
+     4.0,
+     5.0,
+     4.0,
+     4.0,
+     5.0,
+     4.0,
+     3.0,
+     5.0,
+     4.0,
+     4.0,
+     4.0,
+     5.0,
+     3.0,
+     4.0,
+     3.0,
+     4.0,
+     5.0,
+     4.0,
+     4.0,
+     5.0,
+     4.0,
+     4.0,
+     5.0,
+     4.0,
+     3.0,
+     4.0,
+     4.0,
+     5.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     5.0,
+     4.0,
+     3.0,
+     4.0,
+     5.0,
+     4.0,
+     5.0,
+     5.0,
+     5.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     3.0,
+     4.0,
+     4.0,
+     3.0,
+     4.0,
+     4.0,
+     5.0
+    ],
+    "largest_component": {
+     "average_shortest_path_length": 2.6411483253588517,
+     "diameter": 5.0,
+     "nodes": 77,
+     "radius": 3.0
+    },
+    "radius": 3.0,
+    "reachable_pairs": 5852,
+    "total_distance": 15456.0
+   }
   },
   "path_10": {
    "articulation_points": [
@@ -405,15 +667,136 @@
      8,
      9
     ]
-   ]
+   ],
+   "degree_assortativity": -0.12499999999999775,
+   "distance": {
+    "average_shortest_path_length": 3.6666666666666665,
+    "components": 1,
+    "diameter": 9.0,
+    "eccentricity": [
+     9.0,
+     8.0,
+     7.0,
+     6.0,
+     5.0,
+     5.0,
+     6.0,
+     7.0,
+     8.0,
+     9.0
+    ],
+    "largest_component": {
+     "average_shortest_path_length": 3.6666666666666665,
+     "diameter": 9.0,
+     "nodes": 10,
+     "radius": 5.0
+    },
+    "radius": 5.0,
+    "reachable_pairs": 90,
+    "total_distance": 330.0
+   }
   },
   "petersen": {
    "articulation_points": [],
-   "bridges": []
+   "bridges": [],
+   "degree_assortativity": null,
+   "distance": {
+    "average_shortest_path_length": 1.6666666666666667,
+    "components": 1,
+    "diameter": 2.0,
+    "eccentricity": [
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0
+    ],
+    "largest_component": {
+     "average_shortest_path_length": 1.6666666666666667,
+     "diameter": 2.0,
+     "nodes": 10,
+     "radius": 2.0
+    },
+    "radius": 2.0,
+    "reachable_pairs": 90,
+    "total_distance": 150.0
+   }
   },
   "ring_of_cliques_10x5": {
    "articulation_points": [],
-   "bridges": []
+   "bridges": [],
+   "degree_assortativity": -0.09999999999999391,
+   "distance": {
+    "average_shortest_path_length": 5.702040816326531,
+    "components": 1,
+    "diameter": 11.0,
+    "eccentricity": [
+     10.0,
+     10.0,
+     11.0,
+     11.0,
+     11.0,
+     10.0,
+     10.0,
+     11.0,
+     11.0,
+     11.0,
+     10.0,
+     10.0,
+     11.0,
+     11.0,
+     11.0,
+     10.0,
+     10.0,
+     11.0,
+     11.0,
+     11.0,
+     10.0,
+     10.0,
+     11.0,
+     11.0,
+     11.0,
+     10.0,
+     10.0,
+     11.0,
+     11.0,
+     11.0,
+     10.0,
+     10.0,
+     11.0,
+     11.0,
+     11.0,
+     10.0,
+     10.0,
+     11.0,
+     11.0,
+     11.0,
+     10.0,
+     10.0,
+     11.0,
+     11.0,
+     11.0,
+     10.0,
+     10.0,
+     11.0,
+     11.0,
+     11.0
+    ],
+    "largest_component": {
+     "average_shortest_path_length": 5.702040816326531,
+     "diameter": 11.0,
+     "nodes": 50,
+     "radius": 10.0
+    },
+    "radius": 10.0,
+    "reachable_pairs": 2450,
+    "total_distance": 13970.0
+   }
   },
   "star_10": {
    "articulation_points": [
@@ -456,7 +839,34 @@
      0,
      9
     ]
-   ]
+   ],
+   "degree_assortativity": -1.0,
+   "distance": {
+    "average_shortest_path_length": 1.8,
+    "components": 1,
+    "diameter": 2.0,
+    "eccentricity": [
+     1.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0,
+     2.0
+    ],
+    "largest_component": {
+     "average_shortest_path_length": 1.8,
+     "diameter": 2.0,
+     "nodes": 10,
+     "radius": 1.0
+    },
+    "radius": 1.0,
+    "reachable_pairs": 90,
+    "total_distance": 162.0
+   }
   },
   "zachary": {
    "articulation_points": [
@@ -467,7 +877,58 @@
      0,
      11
     ]
-   ]
+   ],
+   "degree_assortativity": -0.47561309768461413,
+   "distance": {
+    "average_shortest_path_length": 2.408199643493761,
+    "components": 1,
+    "diameter": 5.0,
+    "eccentricity": [
+     3.0,
+     3.0,
+     3.0,
+     3.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     3.0,
+     4.0,
+     4.0,
+     4.0,
+     4.0,
+     3.0,
+     5.0,
+     5.0,
+     5.0,
+     4.0,
+     5.0,
+     3.0,
+     5.0,
+     4.0,
+     5.0,
+     5.0,
+     4.0,
+     4.0,
+     5.0,
+     4.0,
+     4.0,
+     5.0,
+     4.0,
+     3.0,
+     4.0,
+     4.0
+    ],
+    "largest_component": {
+     "average_shortest_path_length": 2.408199643493761,
+     "diameter": 5.0,
+     "nodes": 34,
+     "radius": 3.0
+    },
+    "radius": 3.0,
+    "reachable_pairs": 1122,
+    "total_distance": 2702.0
+   }
   }
  }
 }

@@ -49,7 +49,9 @@ use Vegoia\Graph\Community\Quality\ErdosRenyiPotts;
 use Vegoia\Graph\Community\Quality\Modularity;
 use Vegoia\Graph\Community\Quality\Significance;
 use Vegoia\Graph\Community\Quality\Surprise;
+use Vegoia\Graph\Assortativity;
 use Vegoia\Graph\Connectivity;
+use Vegoia\Graph\Distance;
 use Vegoia\Graph\Graph;
 use Vegoia\Graph\KCore;
 use Vegoia\Graph\LinkMeasure;
@@ -60,6 +62,7 @@ use Vegoia\Graph\Path\BreadthFirst;
 use Vegoia\Graph\Path\Dijkstra;
 use Vegoia\Rag\MaximalMarginalRelevance;
 use Vegoia\Rag\NearestNeighbours;
+use Vegoia\Rag\ReciprocalRankFusion;
 use Vegoia\Rag\Similarity;
 use Vegoia\Stats\Correlation;
 use Vegoia\Stats\Descriptive;
@@ -162,6 +165,16 @@ echo md5(json_encode([
     'minimum_spanning' => SpanningTree::minimum($graph),
     'maximum_spanning' => SpanningTree::maximum($graph),
     'spanning_weight' => $n(SpanningTree::weight($graph)),
+    // distance: breadth-first from every node, accumulating as it goes
+    'eccentricity' => $g(Distance::of($graph)->eccentricity),
+    'diameter' => $n(Distance::of($graph)->diameter()),
+    'radius' => $n(Distance::of($graph)->radius()),
+    'average_path' => $n(Distance::of($graph)->averageShortestPathLength()),
+    'assortativity' => $n(Assortativity::degree($graph)),
+    // rank fusion: a sort per key and a reciprocal sum in canonical order
+    'rank_fusion' => $g(ReciprocalRankFusion::fuse([
+        ['a', 'b', 'c', 'd'], ['c', 'b', 'a'], ['d', 'a', 'b', 'c'],
+    ])),
     // structure: two iterative depth-first walks with an explicit stack,
     // which is a shape the JIT rewrites heavily
     'strong_components' => Connectivity::stronglyConnectedComponents($directed)->membership(),

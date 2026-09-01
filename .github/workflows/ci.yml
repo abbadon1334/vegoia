@@ -168,6 +168,7 @@ jobs:
           python3 tools/generate_agreement_fixtures.py
           python3 tools/generate_correlation_fixtures.py
           python3 tools/generate_hypothesis_fixtures.py
+          python3 tools/generate_fusion_fixtures.py
           python3 tools/generate_variance_stress.py
           python3 tools/generate_nist_attainable.py
           python3 tools/generate_lls_attainable.py

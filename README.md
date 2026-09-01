@@ -293,6 +293,33 @@ general case rather than an error: a knowledge graph with two unrelated
 clusters has no spanning tree and its spanning forest is still the right
 answer. The result has n - c edges, not n - 1.
 
+### How far apart a graph is
+
+```php
+use Vegoia\Graph\{Distance, Assortativity};
+
+$d = Distance::of($graph);
+$d->diameter();                          // INF if the graph is disconnected
+$d->radius();
+$d->averageShortestPathLength();
+$d->eccentricity;                        // per node, within its own component
+
+Assortativity::degree($graph);           // do hubs join hubs, or leaves?
+```
+
+One object rather than four functions because one sweep produces all four and
+it is the most expensive thing here — breadth-first search from every node is
+1.4 seconds on a thousand nodes and sixteen thousand edges, and four static
+entry points would run it four times.
+
+NetworkX raises on a disconnected graph; this returns `INF`, because that is
+the answer rather than a guess: the diameter is a maximum over all pairs and
+some of those distances are infinite. The radius is infinite too, which is the
+part that surprises people — every node fails to reach something. What makes
+that usable is that `$eccentricity` is measured within each node's own
+component and so is always finite, which costs nothing when the graph is
+connected and is the only definition anybody can use when it is not.
+
 ### Which edges are probably missing
 
 ```php
@@ -348,6 +375,11 @@ NearestNeighbours::cosine($query, $corpus, k: 10);
 
 // Relevance alone returns near-duplicates; MMR trades a little for coverage.
 MaximalMarginalRelevance::select($query, $corpus, k: 5, lambda: 0.7);
+
+// Combining a vector ranking with a keyword one: a BM25 score and a cosine
+// similarity are not comparable and do not become comparable by rescaling, so
+// throw the scores away and keep the positions.
+ReciprocalRankFusion::fuse([$byEmbedding, $byKeyword]);
 ```
 
 ## What's inside
@@ -362,6 +394,8 @@ src/
 │   │                          articulation points, induced connectivity
 │   ├── Clustering.php         triangles, local coefficient, transitivity
 │   ├── KCore.php              core numbers and k-core subgraphs
+│   ├── Distance.php           eccentricity, diameter, radius, mean path
+│   ├── Assortativity.php      do hubs join hubs?
 │   ├── LinkPrediction.php     five measures for the edges that are missing
 │   ├── SpanningTree.php       Kruskal with union-find; minimum and maximum
 │   ├── Community/
@@ -388,7 +422,8 @@ src/
 │   │                          — both tails, and quantiles against either
 │   └── Regression/            Householder QR least squares, t and p per
 │                              coefficient, confidence and prediction intervals
-├── Rag/                       Similarity, NearestNeighbours, MMR
+├── Rag/                       Similarity, NearestNeighbours, MMR,
+│                              ReciprocalRankFusion
 ├── Interop/
 │   ├── LabelledGraph.php      edge lists, adjacency maps, matrices
 │   └── Graphp.php             adapter for graphp/graph (dev dependency)
@@ -749,6 +784,11 @@ NIST source data lives in `resources/fixtures/nist/` and comes from
   Networks 25(3), 211–230.
 - T. Zhou, L. Lü & Y.-C. Zhang (2009). *Predicting missing links via local
   information.* The European Physical Journal B 71, 623–630.
+- M.E.J. Newman (2002). *Assortative mixing in networks.* Physical Review
+  Letters 89, 208701.
+- G.V. Cormack, C.L.A. Clarke & S. Buettcher (2009). *Reciprocal Rank Fusion
+  outperforms Condorcet and individual Rank Learning Methods.* SIGIR '09,
+  758–759.
 - J.B. Kruskal (1956). *On the shortest spanning subtree of a graph and the
   traveling salesman problem.* Proceedings of the AMS 7(1), 48–50.
 - Y. Benjamini & Y. Hochberg (1995). *Controlling the false discovery rate: a

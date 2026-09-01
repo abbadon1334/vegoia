@@ -134,6 +134,18 @@ def is_sampled(where: str) -> bool:
 
 
 def compare(baseline, current, where: str, digits: bool, problems: list[str], sampled: list[str] | None = None) -> None:
+    # The exemption comes first, before even the type check. A value from
+    # another library can change type between machines and not only value:
+    # `statsmodels_fitted_accuracy` is null when statsmodels happens to hit
+    # the certified value exactly and a float when it does not, and which of
+    # those occurs follows the runner's LAPACK. Checking the type first meant
+    # exempting the values and then failing on their absence.
+    if sampled is not None and not isinstance(baseline, (dict, list)) and is_sampled(where):
+        if baseline != current:
+            sampled.append(f"{where}: {baseline!r} -> {current!r}")
+
+        return
+
     if type(baseline) is not type(current) and not (
         isinstance(baseline, (int, float))
         and isinstance(current, (int, float))
@@ -141,11 +153,6 @@ def compare(baseline, current, where: str, digits: bool, problems: list[str], sa
         and not isinstance(current, bool)
     ):
         problems.append(f"{where}: type changed, {type(baseline).__name__} -> {type(current).__name__}")
-        return
-
-    if sampled is not None and not isinstance(baseline, (dict, list)) and is_sampled(where):
-        if baseline != current:
-            sampled.append(f"{where}: {baseline!r} -> {current!r}")
         return
 
     if isinstance(baseline, dict):

@@ -150,6 +150,34 @@ the mean carries only the uncertainty of where the line is, while a single new
 observation also has to scatter around it — and that part does not shrink as
 the sample grows.
 
+### Four more tests, on the distributions above
+
+```php
+use Vegoia\Stats\{ChiSquaredTest, TTest, MannWhitneyU, KruskalWallis, Continuity, Alternative};
+
+// Do the rows and columns of a contingency table go together?
+ChiSquaredTest::independence([[10, 20], [30, 25]])->pValue();
+
+// Do two samples come from populations with the same mean?
+TTest::welch($treated, $control)->pValue();          // assumes nothing about the variances
+TTest::student($treated, $control)->pValue();        // assumes they are equal
+TTest::welch($treated, $control)->confidenceInterval(0.99);
+
+// The same question without assuming a shape, on the ranks.
+MannWhitneyU::of($treated, $control, Alternative::Greater)->pValue();
+KruskalWallis::of([$a, $b, $c])->pValue();           // one-way ANOVA on the ranks
+```
+
+Two conventions worth knowing, both verified against SciPy rather than taken
+from documentation. Yates' continuity correction is on by default and touches
+only tables with one degree of freedom — and the half-step is clamped to the
+difference it corrects, because the textbook formula overshoots and reports a
+positive statistic where the answer is exactly zero. Mann-Whitney implements
+the normal approximation only: SciPy switches between an exact and an
+asymptotic route on sample size and on ties, the two disagree materially, and
+which one you get is a property of its heuristic rather than of the
+mathematics.
+
 ### Reading a family of p-values instead of one
 
 ```php
@@ -350,6 +378,10 @@ src/
 │   ├── Correlation.php        Pearson, Spearman, Kendall tau-b
 │   ├── OneWayAnova.php        with the p-value that makes F readable
 │   ├── MultipleTesting.php    Bonferroni, Holm, Benjamini-Hochberg
+│   ├── ChiSquaredTest.php     independence, with Yates clamped correctly
+│   ├── TTest.php              Student and Welch, with intervals
+│   ├── MannWhitneyU.php       the asymptotic route, tie-corrected
+│   ├── KruskalWallis.php      one-way ANOVA on the ranks
 │   ├── Ranks.php              midranks and tie groups, one definition of a tie
 │   ├── SpecialFunction.php    erf, erfc, lgamma, incomplete gamma and beta
 │   ├── Distribution/          Normal, StudentT, ChiSquared, FisherSnedecor
@@ -722,6 +754,16 @@ NIST source data lives in `resources/fixtures/nist/` and comes from
 - Y. Benjamini & Y. Hochberg (1995). *Controlling the false discovery rate: a
   practical and powerful approach to multiple testing.* Journal of the Royal
   Statistical Society B 57(1), 289–300.
+- W.H. Kruskal & W.A. Wallis (1952). *Use of ranks in one-criterion variance
+  analysis.* Journal of the American Statistical Association 47(260), 583–621.
+- H.B. Mann & D.R. Whitney (1947). *On a test of whether one of two random
+  variables is stochastically larger than the other.* Annals of Mathematical
+  Statistics 18(1), 50–60.
+- B.L. Welch (1947). *The generalization of Student's problem when several
+  different population variances are involved.* Biometrika 34(1–2), 28–35.
+- F. Yates (1934). *Contingency tables involving small numbers and the chi^2
+  test.* Supplement to the Journal of the Royal Statistical Society 1(2),
+  217–235.
 - S. Holm (1979). *A simple sequentially rejective multiple test procedure.*
   Scandinavian Journal of Statistics 6(2), 65–70.
 - M.J. Wichura (1988). *Algorithm AS 241: the percentage points of the normal

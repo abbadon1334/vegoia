@@ -15,9 +15,14 @@ use Vegoia\Graph\Community\Quality\ConstantPotts;
 use Vegoia\Graph\Community\Quality\ErdosRenyiPotts;
 use Vegoia\Graph\Community\Quality\Modularity;
 use Vegoia\Stats\Adjustment;
+use Vegoia\Stats\Alternative;
+use Vegoia\Stats\ChiSquaredTest;
+use Vegoia\Stats\Continuity;
 use Vegoia\Stats\Descriptive;
+use Vegoia\Stats\MannWhitneyU;
 use Vegoia\Stats\MultipleTesting;
 use Vegoia\Stats\Regression\LeastSquares;
+use Vegoia\Stats\TTest;
 use Vegoia\Tests\Support\GraphFixture;
 
 /**
@@ -194,6 +199,70 @@ final class DefaultsTest extends TestCase
             MultipleTesting::rejected($family, Adjustment::Holm, 0.01),
             MultipleTesting::rejected($family, Adjustment::Holm),
         );
+    }
+
+    /**
+     * Yates' correction is applied unless asked otherwise, and Mann-Whitney's
+     * half-step likewise. Both are SciPy's and R's default, and both change
+     * the answer, so both are pinned twice.
+     */
+    public function test_the_continuity_correction_is_applied_by_default(): void
+    {
+        $table = [[10, 20], [30, 25]];
+
+        self::assertSame(
+            ChiSquaredTest::independence($table, Continuity::Corrected)->statistic,
+            ChiSquaredTest::independence($table)->statistic,
+        );
+
+        self::assertNotSame(
+            ChiSquaredTest::independence($table, Continuity::Uncorrected)->statistic,
+            ChiSquaredTest::independence($table)->statistic,
+        );
+
+        $x = [5.1, 4.9, 6.2, 5.8];
+        $y = [4.2, 4.8, 4.5, 5.1, 4.4];
+
+        self::assertSame(
+            MannWhitneyU::of($x, $y, Alternative::TwoSided, Continuity::Corrected)->pValue(),
+            MannWhitneyU::of($x, $y)->pValue(),
+        );
+
+        self::assertNotSame(
+            MannWhitneyU::of($x, $y, Alternative::TwoSided, Continuity::Uncorrected)->pValue(),
+            MannWhitneyU::of($x, $y)->pValue(),
+        );
+    }
+
+    /**
+     * Mann-Whitney asks a two-sided question unless told otherwise. A
+     * one-sided test is twice as powerful and only legitimate when the
+     * direction was chosen before the data were seen, so the default is the
+     * conservative one.
+     */
+    public function test_mann_whitney_is_two_sided_by_default(): void
+    {
+        $x = [5.1, 4.9, 6.2, 5.8];
+        $y = [4.2, 4.8, 4.5, 5.1, 4.4];
+
+        self::assertSame(
+            MannWhitneyU::of($x, $y, Alternative::TwoSided)->pValue(),
+            MannWhitneyU::of($x, $y)->pValue(),
+        );
+
+        self::assertNotSame(
+            MannWhitneyU::of($x, $y, Alternative::Greater)->pValue(),
+            MannWhitneyU::of($x, $y)->pValue(),
+        );
+    }
+
+    /** A confidence interval is at 95% unless a level is named. */
+    public function test_the_confidence_level_defaults_to_ninety_five_per_cent(): void
+    {
+        $test = TTest::welch([5.1, 4.9, 6.2, 5.8], [4.2, 4.8, 4.5, 5.1, 4.4]);
+
+        self::assertSame($test->confidenceInterval(0.95), $test->confidenceInterval());
+        self::assertNotSame($test->confidenceInterval(0.99), $test->confidenceInterval());
     }
 
     public function test_the_autocorrelation_lag_defaults_to_one(): void

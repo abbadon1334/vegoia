@@ -20,11 +20,15 @@ use Vegoia\Graph\Path\Dijkstra;
 use Vegoia\Rag\MaximalMarginalRelevance;
 use Vegoia\Rag\NearestNeighbours;
 use Vegoia\Stats\Adjustment;
+use Vegoia\Stats\ChiSquaredTest;
 use Vegoia\Stats\Correlation;
 use Vegoia\Stats\Descriptive;
+use Vegoia\Stats\KruskalWallis;
+use Vegoia\Stats\MannWhitneyU;
 use Vegoia\Stats\MultipleTesting;
 use Vegoia\Stats\OneWayAnova;
 use Vegoia\Stats\Regression\LeastSquares;
+use Vegoia\Stats\TTest;
 
 /**
  * Every argument the library refuses, and the nearest one it accepts.
@@ -103,6 +107,66 @@ final class ContractTest extends TestCase
             'different numbers of nodes',
         ];
 
+        yield 'a contingency table with one row' => [
+            static fn () => ChiSquaredTest::independence([[1, 2]]),
+            'A contingency table needs rows',
+        ];
+        yield 'a contingency table with one column' => [
+            static fn () => ChiSquaredTest::independence([[1], [2]]),
+            'A contingency table needs columns',
+        ];
+        yield 'a ragged contingency table' => [
+            static fn () => ChiSquaredTest::independence([[1, 2], [3]]),
+            'Row 1 has 1 entries',
+        ];
+        yield 'a negative count' => [
+            static fn () => ChiSquaredTest::independence([[1, -2], [3, 4]]),
+            'The count at (0, 1)',
+        ];
+        yield 'a contingency table of nothing' => [
+            static fn () => ChiSquaredTest::independence([[0, 0], [0, 0]]),
+            'no observations',
+        ];
+        yield 'a contingency table with an empty row' => [
+            static fn () => ChiSquaredTest::independence([[0, 0], [3, 4]]),
+            'entirely zero',
+        ];
+        yield 'a t-test on a first sample of one' => [
+            static fn () => TTest::welch([1.0], [1.0, 2.0]),
+            'first sample',
+        ];
+        yield 'a t-test on a second sample of one' => [
+            static fn () => TTest::student([1.0, 2.0], [1.0]),
+            'second sample',
+        ];
+        yield 'a confidence level of one' => [
+            static fn () => TTest::welch([1.0, 2.0], [3.0, 4.0])->confidenceInterval(1.0),
+            'A confidence level',
+        ];
+        yield 'Mann-Whitney on an empty sample' => [
+            static fn () => MannWhitneyU::of([], [1.0, 2.0]),
+            'first sample',
+        ];
+        yield 'Mann-Whitney where everything is tied' => [
+            static fn () => MannWhitneyU::of([1.0, 1.0], [1.0, 1.0]),
+            'every observation is tied',
+        ];
+        yield 'Kruskal-Wallis on one group' => [
+            static fn () => KruskalWallis::of([[1.0, 2.0]]),
+            'Kruskal-Wallis needs at least',
+        ];
+        yield 'Kruskal-Wallis with as many observations as groups' => [
+            static fn () => KruskalWallis::of([[1.0], [2.0]]),
+            'more observations than groups',
+        ];
+        yield 'Kruskal-Wallis where everything is tied' => [
+            static fn () => KruskalWallis::of([[1.0, 1.0], [1.0, 1.0]]),
+            'every observation is tied',
+        ];
+        yield 'Kruskal-Wallis with mismatched labels' => [
+            static fn () => KruskalWallis::grouped([1.0, 2.0], ['a']),
+            'one label per observation',
+        ];
         yield 'a p-value above one' => [
             static fn () => MultipleTesting::adjust([0.5, 1.5], Adjustment::Holm),
             'The p-value at position 1',
@@ -265,6 +329,18 @@ final class ContractTest extends TestCase
         yield 'a damping factor just above zero' => [static fn () => new PageRank(1.0e-9)];
         yield 'the smallest usable Katz alpha' => [static fn () => new Katz(PHP_FLOAT_EPSILON)];
 
+        yield 'the smallest usable contingency table' => [
+            static fn () => ChiSquaredTest::independence([[1, 2], [3, 4]]),
+        ];
+        yield 'a t-test on two samples of two' => [
+            static fn () => TTest::welch([1.0, 2.0], [3.0, 5.0]),
+        ];
+        yield 'Mann-Whitney on samples of one' => [
+            static fn () => MannWhitneyU::of([1.0], [2.0]),
+        ];
+        yield 'Kruskal-Wallis on two groups with three observations' => [
+            static fn () => KruskalWallis::of([[1.0, 2.0], [3.0]]),
+        ];
         yield 'p-values at both boundaries' => [
             static fn () => MultipleTesting::adjust([0.0, 1.0], Adjustment::BenjaminiHochberg),
         ];

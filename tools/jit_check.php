@@ -66,6 +66,12 @@ use Vegoia\Stats\Descriptive;
 use Vegoia\Stats\OneWayAnova;
 use Vegoia\Stats\Precision;
 use Vegoia\Stats\Adjustment;
+use Vegoia\Stats\Alternative;
+use Vegoia\Stats\ChiSquaredTest;
+use Vegoia\Stats\Continuity;
+use Vegoia\Stats\KruskalWallis;
+use Vegoia\Stats\MannWhitneyU;
+use Vegoia\Stats\TTest;
 use Vegoia\Stats\MultipleTesting;
 use Vegoia\Stats\Ranks;
 use Vegoia\Stats\Regression\LeastSquares;
@@ -182,6 +188,31 @@ echo md5(json_encode([
     'autocorrelation' => $n($stats->autocorrelation(1)),
     'fast_stdDev' => $n($stats->with(Precision::Fast)->stdDev()),
     'fast_autocorrelation' => $n($stats->with(Precision::Fast)->autocorrelation(1)),
+    // hypothesis tests: compensated accumulation over a rank walk, and a
+    // clamped correction whose branch the JIT will happily specialise away
+    'chi_squared' => $g([
+        ChiSquaredTest::independence([[10, 20], [30, 25]])->statistic,
+        ChiSquaredTest::independence([[10, 20], [30, 25]], Continuity::Uncorrected)->statistic,
+        ChiSquaredTest::independence([[10, 10], [10, 11]])->statistic,
+        ChiSquaredTest::independence([[10, 20, 30], [30, 25, 15], [5, 10, 20]])->pValue(),
+    ]),
+    't_test' => $g([
+        TTest::student(array_slice($x, 0, 30), array_slice($y, 0, 25))->statistic,
+        TTest::welch(array_slice($x, 0, 30), array_slice($y, 0, 25))->statistic,
+        TTest::welch(array_slice($x, 0, 30), array_slice($y, 0, 25))->degreesOfFreedom,
+        TTest::welch(array_slice($x, 0, 30), array_slice($y, 0, 25))->pValue(),
+        ...TTest::welch(array_slice($x, 0, 30), array_slice($y, 0, 25))->confidenceInterval(),
+    ]),
+    'mann_whitney' => $g([
+        MannWhitneyU::of(array_slice($x, 0, 20), array_slice($y, 0, 18))->statistic,
+        MannWhitneyU::of(array_slice($x, 0, 20), array_slice($y, 0, 18))->pValue(),
+        MannWhitneyU::of([1.0, 1.0, 2.0, 3.0], [2.0, 3.0, 3.0, 4.0], Alternative::Greater)->pValue(),
+    ]),
+    'kruskal_wallis' => $g([
+        KruskalWallis::of([[1.0, 1.0, 2.0, 3.0], [2.0, 2.0, 3.0, 4.0], [3.0, 3.0, 4.0, 5.0]])->statistic,
+        KruskalWallis::of([[1.0, 1.0, 2.0, 3.0], [2.0, 2.0, 3.0, 4.0], [3.0, 3.0, 4.0, 5.0]])->tieCorrection,
+        KruskalWallis::of([array_slice($x, 0, 20), array_slice($y, 0, 20), array_slice($x, 20, 20)])->pValue(),
+    ]),
     // multiple testing: a sort by value plus a cumulative pass whose result
     // depends on the order the JIT chooses to evaluate the comparison in
     'bonferroni' => $g(MultipleTesting::adjust([0.01, 0.02, 0.03, 0.04, 0.05], Adjustment::Bonferroni)),

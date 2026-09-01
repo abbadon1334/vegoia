@@ -21,6 +21,27 @@ Notable changes, newest first. Versions are calendar-based: `YY.M.patch`.
   them: the adjusted family is monotone in the raw p-value, Holm never rejects
   less than Bonferroni, and Benjamini-Hochberg never adjusts further than Holm.
 
+- **Four hypothesis tests**, built on the distributions already here:
+  `ChiSquaredTest::independence()`, `TTest::student()` and `::welch()` with
+  confidence intervals, `MannWhitneyU::of()` and `KruskalWallis::of()`, plus
+  the `Continuity` and `Alternative` enums so there are no boolean mode flags.
+
+  Three conventions were verified against SciPy rather than taken from
+  documentation, and two of them contradicted what a first reading suggested.
+  Yates' correction is applied by default and only to tables with one degree
+  of freedom, and its half-step is clamped to the difference being corrected --
+  unclamped, on a table whose every difference is 0.244, the textbook formula
+  reports 0.023 where the answer is exactly zero. The H that SciPy reports for
+  Kruskal-Wallis is already divided by the tie-correction factor. And
+  Mann-Whitney implements the asymptotic route only, with fixtures generated
+  by passing `method='asymptotic'` explicitly, because `auto` switches route
+  on sample size and on ties and the two routes disagree.
+
+  Kruskal-Wallis uses the centred form of H rather than the textbook one,
+  which differences 3(N+1) from a quantity of the same size while H stays
+  O(1): measured against exact rationals it holds 11.95 digits at N = 60000
+  where the centred form holds 13.54.
+
 - `InvalidArgument::notANumber()`. PHP 8.5 warns when NAN is coerced to a
   string, so a range message reporting a NAN emitted a warning while reporting
   an error. A NAN is a different failure from a value out of bounds anyway,

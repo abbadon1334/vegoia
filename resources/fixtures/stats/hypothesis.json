@@ -1,6 +1,706 @@
 {
  "alpha": 0.05,
+ "chi_squared": {
+  "large_counts": {
+   "corrected": {
+    "degrees_of_freedom": 1,
+    "p_value": 4.831990057865866e-78,
+    "statistic": 349.7383115530304
+   },
+   "expected": [
+    [
+     1411.764705882353,
+     1588.235294117647
+    ],
+    [
+     2588.235294117647,
+     2911.764705882353
+    ]
+   ],
+   "table": [
+    [
+     1000,
+     2000
+    ],
+    [
+     3000,
+     2500
+    ]
+   ],
+   "uncorrected": {
+    "degrees_of_freedom": 1,
+    "p_value": 3.153753100577485e-78,
+    "statistic": 350.58922558922575
+   }
+  },
+  "three_by_four": {
+   "corrected": {
+    "degrees_of_freedom": 6,
+    "p_value": 2.4865237368556197e-05,
+    "statistic": 31.04385198135198
+   },
+   "expected": [
+    [
+     15.0,
+     18.333333333333332,
+     21.666666666666668,
+     20.0
+    ],
+    [
+     18.0,
+     22.0,
+     26.0,
+     24.0
+    ],
+    [
+     12.0,
+     14.666666666666666,
+     17.333333333333332,
+     16.0
+    ]
+   ],
+   "table": [
+    [
+     10,
+     20,
+     30,
+     15
+    ],
+    [
+     30,
+     25,
+     15,
+     20
+    ],
+    [
+     5,
+     10,
+     20,
+     25
+    ]
+   ],
+   "uncorrected": {
+    "degrees_of_freedom": 6,
+    "p_value": 2.4865237368556197e-05,
+    "statistic": 31.04385198135198
+   }
+  },
+  "three_by_three": {
+   "corrected": {
+    "degrees_of_freedom": 4,
+    "p_value": 0.0002546006868445286,
+    "statistic": 21.47741147741148
+   },
+   "expected": [
+    [
+     16.363636363636363,
+     20.0,
+     23.636363636363637
+    ],
+    [
+     19.09090909090909,
+     23.333333333333332,
+     27.575757575757574
+    ],
+    [
+     9.545454545454545,
+     11.666666666666666,
+     13.787878787878787
+    ]
+   ],
+   "table": [
+    [
+     10,
+     20,
+     30
+    ],
+    [
+     30,
+     25,
+     15
+    ],
+    [
+     5,
+     10,
+     20
+    ]
+   ],
+   "uncorrected": {
+    "degrees_of_freedom": 4,
+    "p_value": 0.0002546006868445286,
+    "statistic": 21.47741147741148
+   }
+  },
+  "two_by_two": {
+   "corrected": {
+    "degrees_of_freedom": 1,
+    "p_value": 0.0999616438735349,
+    "statistic": 2.706155303030302
+   },
+   "expected": [
+    [
+     14.117647058823529,
+     15.882352941176471
+    ],
+    [
+     25.88235294117647,
+     29.11764705882353
+    ]
+   ],
+   "table": [
+    [
+     10,
+     20
+    ],
+    [
+     30,
+     25
+    ]
+   ],
+   "uncorrected": {
+    "degrees_of_freedom": 1,
+    "p_value": 0.06115089757606777,
+    "statistic": 3.505892255892255
+   }
+  },
+  "two_by_two_balanced": {
+   "corrected": {
+    "degrees_of_freedom": 1,
+    "p_value": 1.0,
+    "statistic": 0.0
+   },
+   "expected": [
+    [
+     25.0,
+     25.0
+    ],
+    [
+     25.0,
+     25.0
+    ]
+   ],
+   "table": [
+    [
+     25,
+     25
+    ],
+    [
+     25,
+     25
+    ]
+   ],
+   "uncorrected": {
+    "degrees_of_freedom": 1,
+    "p_value": 1.0,
+    "statistic": 0.0
+   }
+  },
+  "two_by_two_under_half_a_step": {
+   "corrected": {
+    "degrees_of_freedom": 1,
+    "p_value": 1.0,
+    "statistic": 0.0
+   },
+   "expected": [
+    [
+     9.75609756097561,
+     10.24390243902439
+    ],
+    [
+     10.24390243902439,
+     10.75609756097561
+    ]
+   ],
+   "table": [
+    [
+     10,
+     10
+    ],
+    [
+     10,
+     11
+    ]
+   ],
+   "uncorrected": {
+    "degrees_of_freedom": 1,
+    "p_value": 0.8788278129295307,
+    "statistic": 0.02324263038548757
+   }
+  }
+ },
  "generator": "statsmodels.stats.multitest.multipletests, alpha=0.05",
+ "kruskal_wallis": {
+  "many_groups": {
+   "degrees_of_freedom": 5,
+   "groups": [
+    [
+     0.0,
+     1.0,
+     2.0,
+     3.0
+    ],
+    [
+     1.0,
+     2.0,
+     3.0,
+     4.0
+    ],
+    [
+     2.0,
+     3.0,
+     4.0,
+     5.0
+    ],
+    [
+     3.0,
+     4.0,
+     5.0,
+     6.0
+    ],
+    [
+     4.0,
+     5.0,
+     6.0,
+     7.0
+    ],
+    [
+     5.0,
+     6.0,
+     7.0,
+     8.0
+    ]
+   ],
+   "p_value": 0.005889198522160397,
+   "statistic": 16.359513274336287
+  },
+  "no_difference": {
+   "degrees_of_freedom": 2,
+   "groups": [
+    [
+     1.0,
+     2.0,
+     3.0
+    ],
+    [
+     1.0,
+     2.0,
+     3.0
+    ],
+    [
+     1.0,
+     2.0,
+     3.0
+    ]
+   ],
+   "p_value": 1.0,
+   "statistic": 0.0
+  },
+  "three_clean": {
+   "degrees_of_freedom": 2,
+   "groups": [
+    [
+     1.0,
+     2.0,
+     3.0
+    ],
+    [
+     4.0,
+     5.0,
+     6.0
+    ],
+    [
+     7.0,
+     8.0,
+     9.5
+    ]
+   ],
+   "p_value": 0.02732372244729252,
+   "statistic": 7.200000000000003
+  },
+  "three_with_ties": {
+   "degrees_of_freedom": 2,
+   "groups": [
+    [
+     1.0,
+     1.0,
+     2.0,
+     3.0
+    ],
+    [
+     2.0,
+     2.0,
+     3.0,
+     4.0
+    ],
+    [
+     3.0,
+     3.0,
+     4.0,
+     5.0
+    ]
+   ],
+   "p_value": 0.06761120998630042,
+   "statistic": 5.387962962962969
+  },
+  "two_groups": {
+   "degrees_of_freedom": 1,
+   "groups": [
+    [
+     1.0,
+     2.0,
+     3.0,
+     4.0
+    ],
+    [
+     3.0,
+     4.0,
+     5.0,
+     6.0
+    ]
+   ],
+   "p_value": 0.0795940892792762,
+   "statistic": 3.073170731707317
+  },
+  "uneven_sizes": {
+   "degrees_of_freedom": 2,
+   "groups": [
+    [
+     1.0,
+     2.0
+    ],
+    [
+     3.0,
+     4.0,
+     5.0,
+     6.0,
+     7.0
+    ],
+    [
+     8.0,
+     9.0
+    ]
+   ],
+   "p_value": 0.03813332654704524,
+   "statistic": 6.533333333333331
+  }
+ },
+ "mann_whitney": {
+  "equal_variance": {
+   "greater_corrected": {
+    "p_value": 0.9634301001705455,
+    "statistic": 4.5
+   },
+   "greater_uncorrected": {
+    "p_value": 0.9541548592252854,
+    "statistic": 4.5
+   },
+   "less_corrected": {
+    "p_value": 0.056923149003329024,
+    "statistic": 4.5
+   },
+   "less_uncorrected": {
+    "p_value": 0.04584514077471458,
+    "statistic": 4.5
+   },
+   "two-sided_corrected": {
+    "p_value": 0.11384629800665805,
+    "statistic": 4.5
+   },
+   "two-sided_uncorrected": {
+    "p_value": 0.09169028154942915,
+    "statistic": 4.5
+   },
+   "x": [
+    1.0,
+    2.0,
+    3.0,
+    4.0,
+    5.0
+   ],
+   "y": [
+    3.0,
+    4.0,
+    5.0,
+    6.0,
+    7.0
+   ]
+  },
+  "heavily_tied": {
+   "greater_corrected": {
+    "p_value": 0.9330689276222845,
+    "statistic": 6.0
+   },
+   "greater_uncorrected": {
+    "p_value": 0.9180342117165798,
+    "statistic": 6.0
+   },
+   "less_corrected": {
+    "p_value": 0.09941447200822123,
+    "statistic": 6.0
+   },
+   "less_uncorrected": {
+    "p_value": 0.0819657882834201,
+    "statistic": 6.0
+   },
+   "two-sided_corrected": {
+    "p_value": 0.19882894401644247,
+    "statistic": 6.0
+   },
+   "two-sided_uncorrected": {
+    "p_value": 0.1639315765668402,
+    "statistic": 6.0
+   },
+   "x": [
+    1.0,
+    2.0,
+    2.0,
+    3.0,
+    4.0
+   ],
+   "y": [
+    2.0,
+    3.0,
+    3.0,
+    5.0,
+    6.0
+   ]
+  },
+  "identical_samples": {
+   "greater_corrected": {
+    "p_value": 0.5902615116112394,
+    "statistic": 4.5
+   },
+   "greater_uncorrected": {
+    "p_value": 0.5,
+    "statistic": 4.5
+   },
+   "less_corrected": {
+    "p_value": 0.5902615116112394,
+    "statistic": 4.5
+   },
+   "less_uncorrected": {
+    "p_value": 0.5,
+    "statistic": 4.5
+   },
+   "two-sided_corrected": {
+    "p_value": 1.0,
+    "statistic": 4.5
+   },
+   "two-sided_uncorrected": {
+    "p_value": 1.0,
+    "statistic": 4.5
+   },
+   "x": [
+    1.0,
+    2.0,
+    3.0
+   ],
+   "y": [
+    1.0,
+    2.0,
+    3.0
+   ]
+  },
+  "large_and_shifted": {
+   "greater_corrected": {
+    "p_value": 0.9634301001705455,
+    "statistic": 4.5
+   },
+   "greater_uncorrected": {
+    "p_value": 0.9541548592252854,
+    "statistic": 4.5
+   },
+   "less_corrected": {
+    "p_value": 0.056923149003329024,
+    "statistic": 4.5
+   },
+   "less_uncorrected": {
+    "p_value": 0.04584514077471458,
+    "statistic": 4.5
+   },
+   "two-sided_corrected": {
+    "p_value": 0.11384629800665805,
+    "statistic": 4.5
+   },
+   "two-sided_uncorrected": {
+    "p_value": 0.09169028154942915,
+    "statistic": 4.5
+   },
+   "x": [
+    100000001.0,
+    100000002.0,
+    100000003.0,
+    100000004.0,
+    100000005.0
+   ],
+   "y": [
+    100000003.0,
+    100000004.0,
+    100000005.0,
+    100000006.0,
+    100000007.0
+   ]
+  },
+  "no_overlap": {
+   "greater_corrected": {
+    "p_value": 0.9854518341293739,
+    "statistic": 0.0
+   },
+   "greater_uncorrected": {
+    "p_value": 0.9752326932821866,
+    "statistic": 0.0
+   },
+   "less_corrected": {
+    "p_value": 0.04042779918502612,
+    "statistic": 0.0
+   },
+   "less_uncorrected": {
+    "p_value": 0.024767306717813353,
+    "statistic": 0.0
+   },
+   "two-sided_corrected": {
+    "p_value": 0.08085559837005224,
+    "statistic": 0.0
+   },
+   "two-sided_uncorrected": {
+    "p_value": 0.049534613435626706,
+    "statistic": 0.0
+   },
+   "x": [
+    1.0,
+    2.0,
+    3.0
+   ],
+   "y": [
+    10.0,
+    11.0,
+    12.0
+   ]
+  },
+  "unequal_variance_and_size": {
+   "greater_corrected": {
+    "p_value": 0.0014018673238333633,
+    "statistic": 67.5
+   },
+   "greater_uncorrected": {
+    "p_value": 0.0011960113821541957,
+    "statistic": 67.5
+   },
+   "less_corrected": {
+    "p_value": 0.998981819584811,
+    "statistic": 67.5
+   },
+   "less_uncorrected": {
+    "p_value": 0.9988039886178458,
+    "statistic": 67.5
+   },
+   "two-sided_corrected": {
+    "p_value": 0.0028037346476667267,
+    "statistic": 67.5
+   },
+   "two-sided_uncorrected": {
+    "p_value": 0.0023920227643083915,
+    "statistic": 67.5
+   },
+   "x": [
+    5.1,
+    4.9,
+    6.2,
+    5.8,
+    5.5,
+    5.0,
+    6.1,
+    5.9
+   ],
+   "y": [
+    4.2,
+    4.8,
+    4.5,
+    5.1,
+    4.4,
+    4.9,
+    4.7,
+    4.3,
+    5.0
+   ]
+  },
+  "wildly_unequal_spread": {
+   "greater_corrected": {
+    "p_value": 0.9914636694531058,
+    "statistic": 0.0
+   },
+   "greater_uncorrected": {
+    "p_value": 0.9873263406612659,
+    "statistic": 0.0
+   },
+   "less_corrected": {
+    "p_value": 0.018444212853524936,
+    "statistic": 0.0
+   },
+   "less_uncorrected": {
+    "p_value": 0.012673659338734126,
+    "statistic": 0.0
+   },
+   "two-sided_corrected": {
+    "p_value": 0.03688842570704987,
+    "statistic": 0.0
+   },
+   "two-sided_uncorrected": {
+    "p_value": 0.025347318677468252,
+    "statistic": 0.0
+   },
+   "x": [
+    1.0,
+    2.0,
+    3.0,
+    4.0,
+    5.0
+   ],
+   "y": [
+    10.0,
+    20.0,
+    30.0
+   ]
+  },
+  "with_ties": {
+   "greater_corrected": {
+    "p_value": 0.9638666318672099,
+    "statistic": 2.5
+   },
+   "greater_uncorrected": {
+    "p_value": 0.9502875271033303,
+    "statistic": 2.5
+   },
+   "less_corrected": {
+    "p_value": 0.06708459006406292,
+    "statistic": 2.5
+   },
+   "less_uncorrected": {
+    "p_value": 0.04971247289666969,
+    "statistic": 2.5
+   },
+   "two-sided_corrected": {
+    "p_value": 0.13416918012812584,
+    "statistic": 2.5
+   },
+   "two-sided_uncorrected": {
+    "p_value": 0.09942494579333938,
+    "statistic": 2.5
+   },
+   "x": [
+    1.0,
+    1.0,
+    2.0,
+    3.0
+   ],
+   "y": [
+    2.0,
+    3.0,
+    3.0,
+    4.0
+   ]
+  }
+ },
  "multiple_testing": {
   "all_significant": {
    "benjamini_hochberg": {
@@ -580,6 +1280,275 @@
    ]
   }
  },
- "note": "Adjusted p-values are returned in input order, under the input positions, and are clamped to 1. Holm is step-down and Benjamini-Hochberg is step-up; both enforce monotonicity across the sorted family, which is why 'ratios_out_of_order' is here. Rejection is adjusted <= alpha.",
- "regenerate": "python3 tools/generate_hypothesis_fixtures.py"
+ "note": "Adjusted p-values are returned in input order, under the input positions, and are clamped to 1. Holm is step-down and Benjamini-Hochberg is step-up; both enforce monotonicity across the sorted family, which is why 'ratios_out_of_order' is here. Rejection is adjusted <= alpha. Chi-squared is recorded both with and without Yates' correction, which SciPy applies by default and which only touches 2x2 tables. Mann-Whitney is generated with method='asymptotic' passed explicitly, never 'auto': auto switches route on sample size and on the presence of ties, and the two routes disagree, so a fixture built with it would pin SciPy's heuristic rather than the mathematics. The H that SciPy reports for Kruskal-Wallis is already divided by the tie-correction factor.",
+ "regenerate": "python3 tools/generate_hypothesis_fixtures.py",
+ "t": {
+  "equal_variance": {
+   "student": {
+    "confidence_interval": [
+     -4.306004135204166,
+     0.3060041352041658
+    ],
+    "degrees_of_freedom": 8.0,
+    "p_value": 0.08051623795726262,
+    "statistic": -2.0
+   },
+   "welch": {
+    "confidence_interval": [
+     -4.306004135204166,
+     0.3060041352041658
+    ],
+    "degrees_of_freedom": 8.0,
+    "p_value": 0.08051623795726262,
+    "statistic": -2.0
+   },
+   "x": [
+    1.0,
+    2.0,
+    3.0,
+    4.0,
+    5.0
+   ],
+   "y": [
+    3.0,
+    4.0,
+    5.0,
+    6.0,
+    7.0
+   ]
+  },
+  "heavily_tied": {
+   "student": {
+    "confidence_interval": [
+     -3.4625528010848523,
+     0.6625528010848525
+    ],
+    "degrees_of_freedom": 8.0,
+    "p_value": 0.15615647306581487,
+    "statistic": -1.5652475842498528
+   },
+   "welch": {
+    "confidence_interval": [
+     -3.5073711107202055,
+     0.7073711107202056
+    ],
+    "degrees_of_freedom": 7.126948775055681,
+    "p_value": 0.16074534552573058,
+    "statistic": -1.5652475842498528
+   },
+   "x": [
+    1.0,
+    2.0,
+    2.0,
+    3.0,
+    4.0
+   ],
+   "y": [
+    2.0,
+    3.0,
+    3.0,
+    5.0,
+    6.0
+   ]
+  },
+  "identical_samples": {
+   "student": {
+    "confidence_interval": [
+     -2.266957935527519,
+     2.266957935527519
+    ],
+    "degrees_of_freedom": 4.0,
+    "p_value": 1.0,
+    "statistic": 0.0
+   },
+   "welch": {
+    "confidence_interval": [
+     -2.266957935527519,
+     2.266957935527519
+    ],
+    "degrees_of_freedom": 4.0,
+    "p_value": 1.0,
+    "statistic": 0.0
+   },
+   "x": [
+    1.0,
+    2.0,
+    3.0
+   ],
+   "y": [
+    1.0,
+    2.0,
+    3.0
+   ]
+  },
+  "large_and_shifted": {
+   "student": {
+    "confidence_interval": [
+     -4.306004135204166,
+     0.3060041352041658
+    ],
+    "degrees_of_freedom": 8.0,
+    "p_value": 0.08051623795726262,
+    "statistic": -2.0
+   },
+   "welch": {
+    "confidence_interval": [
+     -4.306004135204166,
+     0.3060041352041658
+    ],
+    "degrees_of_freedom": 8.0,
+    "p_value": 0.08051623795726262,
+    "statistic": -2.0
+   },
+   "x": [
+    100000001.0,
+    100000002.0,
+    100000003.0,
+    100000004.0,
+    100000005.0
+   ],
+   "y": [
+    100000003.0,
+    100000004.0,
+    100000005.0,
+    100000006.0,
+    100000007.0
+   ]
+  },
+  "no_overlap": {
+   "student": {
+    "confidence_interval": [
+     -11.266957935527518,
+     -6.733042064472481
+    ],
+    "degrees_of_freedom": 4.0,
+    "p_value": 0.0003850677113665412,
+    "statistic": -11.022703842524301
+   },
+   "welch": {
+    "confidence_interval": [
+     -11.266957935527518,
+     -6.733042064472481
+    ],
+    "degrees_of_freedom": 4.0,
+    "p_value": 0.0003850677113665412,
+    "statistic": -11.022703842524301
+   },
+   "x": [
+    1.0,
+    2.0,
+    3.0
+   ],
+   "y": [
+    10.0,
+    11.0,
+    12.0
+   ]
+  },
+  "unequal_variance_and_size": {
+   "student": {
+    "confidence_interval": [
+     0.47072219775939556,
+     1.3431666911294926
+    ],
+    "degrees_of_freedom": 15.0,
+    "p_value": 0.0004853575227691539,
+    "statistic": 4.431471202235067
+   },
+   "welch": {
+    "confidence_interval": [
+     0.44636696718102375,
+     1.3675219217078645
+    ],
+    "degrees_of_freedom": 11.498800614395043,
+    "p_value": 0.001114194371247372,
+    "statistic": 4.311234044085518
+   },
+   "x": [
+    5.1,
+    4.9,
+    6.2,
+    5.8,
+    5.5,
+    5.0,
+    6.1,
+    5.9
+   ],
+   "y": [
+    4.2,
+    4.8,
+    4.5,
+    5.1,
+    4.4,
+    4.9,
+    4.7,
+    4.3,
+    5.0
+   ]
+  },
+  "wildly_unequal_spread": {
+   "student": {
+    "confidence_interval": [
+     -27.571867479421186,
+     -6.428132520578814
+    ],
+    "degrees_of_freedom": 6.0,
+    "p_value": 0.0076708782119154825,
+    "statistic": -3.9347354240333434
+   },
+   "welch": {
+    "confidence_interval": [
+     -41.33889500676615,
+     7.338895006766155
+    ],
+    "degrees_of_freedom": 2.0602182254496366,
+    "p_value": 0.09643676553672981,
+    "statistic": -2.9226481008123892
+   },
+   "x": [
+    1.0,
+    2.0,
+    3.0,
+    4.0,
+    5.0
+   ],
+   "y": [
+    10.0,
+    20.0,
+    30.0
+   ]
+  },
+  "with_ties": {
+   "student": {
+    "confidence_interval": [
+     -2.7894816128205377,
+     0.28948161282053775
+    ],
+    "degrees_of_freedom": 6.0,
+    "p_value": 0.09413276656581646,
+    "statistic": -1.9867985355975657
+   },
+   "welch": {
+    "confidence_interval": [
+     -2.79883316644678,
+     0.29883316644678026
+    ],
+    "degrees_of_freedom": 5.854054054054054,
+    "p_value": 0.0953238974066234,
+    "statistic": -1.9867985355975657
+   },
+   "x": [
+    1.0,
+    1.0,
+    2.0,
+    3.0
+   ],
+   "y": [
+    2.0,
+    3.0,
+    3.0,
+    4.0
+   ]
+  }
+ }
 }

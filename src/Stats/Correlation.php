@@ -7,12 +7,9 @@ namespace Vegoia\Stats;
 use function array_keys;
 use function array_values;
 use function count;
-use function ksort;
 use function max;
 use function min;
-use function range;
 use function sqrt;
-use function usort;
 
 use Vegoia\Exception\InvalidArgument;
 use Vegoia\Support\CompensatedSum;
@@ -203,62 +200,32 @@ final class Correlation
      * @param  list<float> $values
      * @return list<float>
      */
+    /**
+     * @param list<float> $values
+     *
+     * @return list<float>
+     */
     private static function midranks(array $values): array
     {
-        $n = count($values);
-        $order = range(0, $n - 1);
-
-        usort($order, static fn (int $a, int $b): int => $values[$a] <=> $values[$b]);
-
-        $ranks = [];
-
-        for ($i = 0; $i < $n;) {
-            $j = $i;
-
-            while ($j + 1 < $n && $values[$order[$j + 1]] === $values[$order[$i]]) {
-                $j++;
-            }
-
-            // Positions i..j are tied; ranks are 1-based, so their mean is
-            // (i + j) / 2 + 1.
-            $rank = ($i + $j) / 2.0 + 1.0;
-
-            for ($k = $i; $k <= $j; $k++) {
-                $ranks[$order[$k]] = $rank;
-            }
-
-            $i = $j + 1;
-        }
-
-        ksort($ranks);
-
-        /** @var list<float> $ranks */
-        return array_values($ranks);
+        return Ranks::midranks($values);
     }
 
     /**
-     * Pairs tied within a sample: sum of t(t-1)/2 over each group of equal
-     * values.
+     * Tied pairs, for tau-b's denominator.
+     *
+     * Delegated rather than computed here, and that delegation is the fix for
+     * a real defect: this used to group values by their string form, and PHP's
+     * default precision of 14 makes distinct doubles collide, so tau-b's
+     * denominator counted a pair as tied that its numerator had already
+     * counted as ordered. See Ranks for the measurement.
      *
      * @param list<float> $values
      */
     private static function tiedPairs(array $values): float
     {
-        $counts = [];
-
-        foreach ($values as $value) {
-            $key = (string) $value;
-            $counts[$key] = ($counts[$key] ?? 0) + 1;
-        }
-
-        $tied = 0.0;
-
-        foreach ($counts as $count) {
-            $tied += $count * ($count - 1) / 2.0;
-        }
-
-        return $tied;
+        return Ranks::tiedPairs($values);
     }
+
 
     /**
      * @param array<array-key, float> $x

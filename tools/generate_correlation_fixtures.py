@@ -34,6 +34,15 @@ CASES = {
     "parabola": ([-2, -1, 0, 1, 2], [4, 1, 0, 1, 4]),
     "noisy": ([1, 2, 3, 4, 5, 6, 7, 8], [2, 1, 4, 3, 6, 5, 8, 7]),
     "with_ties_x": ([1, 1, 2, 2, 3, 3], [1, 2, 3, 4, 5, 6]),
+    # Two values that are distinct as doubles and identical once PHP casts
+    # them to string at its default precision of 14. Nothing about the data is
+    # unusual -- 0.1 and the next few ulps above it -- but a tie test written
+    # on the string form counts them as tied while a tie test written on the
+    # value does not, and Kendall's tau-b needs both halves to agree.
+    "ties_only_after_rounding": (
+        [0.1, 0.10000000000000012, 0.2, 0.3, 0.4, 0.5],
+        [1.0, 2.0, 3.0, 6.0, 4.0, 5.0],
+    ),
     "with_ties_both": ([1, 1, 2, 2, 3, 3], [1, 1, 2, 2, 3, 3]),
     "anscombe_1": (
         [10, 8, 13, 9, 11, 14, 6, 4, 12, 7, 5],

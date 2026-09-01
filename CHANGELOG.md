@@ -2,6 +2,40 @@
 
 Notable changes, newest first. Versions are calendar-based: `YY.M.patch`.
 
+## 26.9.3 — 2026-09-01
+
+### Fixed
+
+- **`Correlation::kendall()` returned a number that was neither answer when
+  two values collided as strings but not as doubles.** Tau-b counts tied pairs
+  in its denominator and ordered pairs in its numerator, and the two halves
+  disagreed about what a tie was: the denominator grouped values by
+  `(string) $value`, and PHP's default `precision` of 14 makes distinct
+  doubles collide.
+
+  ```
+  (string) 0.1 === (string) 0.10000000000000012   // true
+  0.1 === 0.10000000000000012                     // false
+  ```
+
+  On `x = [0.1, 0.10000000000000012, 0.2, 0.3, 0.4, 0.5]` against
+  `y = [1, 2, 3, 6, 4, 5]` it returned 0.75907, where the answer is 0.73333 and
+  the answer had the pair genuinely been tied would have been 0.69007. Nothing
+  about that input is contrived — it is 0.1 and a few units in the last place
+  above it, which any arithmetic produces.
+
+### Added
+
+- `Vegoia\Stats\Ranks`, with `midranks()`, `tieSizes()` and `tiedPairs()`.
+  Extracted so that everything needing to know what a tie is agrees, which is
+  what fixes the above; `Correlation` delegates to it. It exists in its own
+  right because Mann-Whitney and Kruskal-Wallis will need the same definition.
+
+  Writing its tests found a second defect on the way: `midranks([])` called
+  `range(0, -1)`, which counts downwards and returns `[0, -1]` with a warning.
+  `Correlation` never reached it, refusing samples below two long before
+  ranking them, but a public primitive has no such guard.
+
 ## 26.9.2 — 2026-09-01
 
 ### Changed

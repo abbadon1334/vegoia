@@ -65,6 +65,7 @@ use Vegoia\Stats\Correlation;
 use Vegoia\Stats\Descriptive;
 use Vegoia\Stats\OneWayAnova;
 use Vegoia\Stats\Precision;
+use Vegoia\Stats\Ranks;
 use Vegoia\Stats\Regression\LeastSquares;
 use Vegoia\Stats\Distribution\ChiSquared;
 use Vegoia\Stats\Distribution\FisherSnedecor;
@@ -179,6 +180,10 @@ echo md5(json_encode([
     'autocorrelation' => $n($stats->autocorrelation(1)),
     'fast_stdDev' => $n($stats->with(Precision::Fast)->stdDev()),
     'fast_autocorrelation' => $n($stats->with(Precision::Fast)->autocorrelation(1)),
+    // ranks: a sort with a tie walk, whose comparisons the JIT specialises
+    'midranks' => $g(Ranks::midranks(array_slice($x, 0, 40))),
+    'tie_sizes' => Ranks::tieSizes([0.1, 0.1, 0.2, 0.2, 0.2, 0.3]),
+    'tied_pairs' => $n(Ranks::tiedPairs([0.1, 0.1, 0.2, 0.2, 0.2, 0.3])),
     'pearson' => $n(Correlation::pearson($x, $y)),
     'spearman' => $n(Correlation::spearman($x, $y)),
     'kendall' => $n(Correlation::kendall(array_slice($x, 0, 120), array_slice($y, 0, 120))),

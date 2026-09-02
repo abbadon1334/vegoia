@@ -79,4 +79,47 @@ final class PartitionTest extends TestCase
 
         Partition::fromMembership([0, 1])->communityOf(9);
     }
+
+    /**
+     * Filtering leaves the dropped nodes unassigned, and the result says so
+     * rather than pretending they belong somewhere.
+     *
+     * The -1 is deliberate -- the source comment explains that relabelling
+     * orphans into community 0 would be worse -- but it means the partition no
+     * longer tiles the node set, and everything downstream has to know.
+     */
+    public function test_filtering_leaves_the_dropped_nodes_unassigned(): void
+    {
+        $partition = Partition::fromMembership([0, 0, 0, 1, 2, 2]);
+        [$filtered, $orphans] = $partition->withoutCommunitiesSmallerThan(2);
+
+        self::assertSame([3], $orphans);
+        self::assertSame([0, 0, 0, -1, 1, 1], $filtered->membership());
+        self::assertSame(2, $filtered->count());
+
+        // The invariant everything else in this class keeps, and which a
+        // filtered partition deliberately does not.
+        self::assertSame(6, $filtered->order());
+        self::assertSame(5, array_sum($filtered->sizes()));
+        self::assertTrue($filtered->hasUnassigned());
+        self::assertFalse($partition->hasUnassigned());
+    }
+
+    /**
+     * An unassigned node is not a community of its own, and a round trip
+     * through membership() would make it one.
+     */
+    public function test_a_filtered_partition_does_not_survive_a_round_trip(): void
+    {
+        [$filtered] = Partition::fromMembership([0, 0, 0, 1, 2, 2])
+            ->withoutCommunitiesSmallerThan(2);
+
+        self::assertSame(2, $filtered->count());
+        self::assertSame(
+            3,
+            Partition::fromMembership($filtered->membership())->count(),
+            'rebuilding turns the orphans into a third community, which is why hasUnassigned() '
+            . 'exists and why the comparison measures refuse such a partition',
+        );
+    }
 }

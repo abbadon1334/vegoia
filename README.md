@@ -512,8 +512,15 @@ somebody's random number stream.
 **Mutation testing, not just coverage.** Coverage says which lines ran, which
 is a weaker question than it looks. Infection changes one operator or constant
 at a time and reruns the suite; a surviving mutant is a change to the library
-that no assertion objects to. The gate is 83% covered MSI at 100% mutation
-coverage, and the number is measured rather than aspired to.
+that no assertion objects to. The gate is 81% overall and 84% over the code
+the tests reach, both measured rather than aspired to.
+
+Two numbers, because Infection reports two and only one of them can be gamed.
+Without `--with-uncovered` it does not generate mutants for code no test
+touches, so the denominator excludes exactly what is missing tests and adding
+an untested class cannot lower the score. This repository ran that way until a
+review pointed it out: 186 mutants appear only with the flag, and the overall
+figure is 81% rather than 84%.
 
 It has earned its place. It found `Correlation::pearson` returning 0.596 where
 the answer was 0.965 on an array whose keys were not 0..n-1; a normalisation

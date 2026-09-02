@@ -243,4 +243,75 @@ final class LinearRegressionTest extends TestCase
 
         return LeastSquares::fit($set->predictors, $set->response, $set->hasIntercept);
     }
+
+    /**
+     * A design whose columns are linearly dependent has no unique answer, and
+     * saying so is the only honest thing to return.
+     *
+     * Two identical predictors is not a contrived case -- it is what happens
+     * the moment somebody regresses two features that turn out to measure the
+     * same thing. Before this guard worked, that returned coefficients of
+     * -9.5e12 and +9.5e12 that cancel to something plausible, with an
+     * R-squared of 0.9959 and no signal at all. The standard errors were
+     * 2.9e14, which is the only place the trouble showed, and nothing looks at
+     * those unless it already suspects something.
+     *
+     * The guards existed. They compared floats with ===, against a
+     * decomposition that leaves a residue near 1e-16 rather than a clean zero,
+     * so they only fired on the trivially exact cases -- a column of zeros --
+     * where the arithmetic happens to come out right by accident.
+     */
+    public function test_a_rank_deficient_design_is_refused(): void
+    {
+        $this->expectException(InvalidArgument::class);
+        $this->expectExceptionMessageMatches('/rank deficient|linearly dependent/i');
+
+        LeastSquares::fit(
+            [[1.0, 1.0], [2.0, 2.0], [3.0, 3.0], [4.0, 4.0], [5.0, 5.0]],
+            [1.0, 2.0, 3.1, 3.9, 5.2],
+        );
+    }
+
+    /** A column that is a multiple of another is just as dependent. */
+    public function test_a_proportional_column_is_refused(): void
+    {
+        $this->expectException(InvalidArgument::class);
+
+        LeastSquares::fit(
+            [[1.0, 3.0], [2.0, 6.0], [3.0, 9.0], [4.0, 12.0], [5.0, 15.0]],
+            [1.0, 2.0, 3.1, 3.9, 5.2],
+        );
+    }
+
+    /** And so is a column that duplicates the intercept. */
+    public function test_a_constant_column_beside_an_intercept_is_refused(): void
+    {
+        $this->expectException(InvalidArgument::class);
+
+        LeastSquares::fit(
+            [[1.0, 7.0], [2.0, 7.0], [3.0, 7.0], [4.0, 7.0], [5.0, 7.0]],
+            [1.0, 2.0, 3.1, 3.9, 5.2],
+            true,
+        );
+    }
+
+    /**
+     * The threshold has to refuse the singular without refusing the merely
+     * difficult, and the gap it sits in was measured rather than assumed.
+     *
+     * The smallest diagonal of R, relative to the largest, is 1.6e-16 on the
+     * collinear design above -- machine epsilon, which is what a dependent
+     * column leaves behind. On the hardest legitimate case in the NIST
+     * collection it is 1.3e-5, and on Filip's degree-ten Vandermonde 2.4e-2.
+     * Eleven orders of magnitude separate the two, and the tolerance sits in
+     * the middle, so this is not a judgement call that could go either way.
+     */
+    public function test_the_difficult_datasets_are_still_accepted(): void
+    {
+        foreach (['Longley', 'Norris', 'Pontius', 'Wampler5', 'Filip'] as $name) {
+            $fit = self::fit(NistRegression::load($name));
+
+            self::assertNotEmpty($fit->coefficients, "{$name} was refused");
+        }
+    }
 }

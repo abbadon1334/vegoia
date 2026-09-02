@@ -187,4 +187,32 @@ final class AgreementTest extends TestCase
             $expected,
         ];
     }
+
+    /**
+     * A partition with unassigned nodes is refused, not fumbled.
+     *
+     * Before this guard, comparing against a filtered partition emitted
+     * "Undefined array key -1" and then died with a DivisionByZeroError --
+     * which is not a VegoiaException, so a caller catching this library's own
+     * exception type would not have caught it.
+     */
+    public function test_a_partition_with_unassigned_nodes_is_refused(): void
+    {
+        $whole = Partition::fromMembership([0, 0, 0, 1, 2, 2]);
+        [$filtered] = $whole->withoutCommunitiesSmallerThan(2);
+
+        foreach ([
+            'NMI' => static fn () => Agreement::normalisedMutualInformation($whole, $filtered),
+            'ARI' => static fn () => Agreement::adjustedRandIndex($whole, $filtered),
+            'VI' => static fn () => Agreement::variationOfInformation($whole, $filtered),
+            'reversed' => static fn () => Agreement::normalisedMutualInformation($filtered, $whole),
+        ] as $label => $call) {
+            try {
+                $call();
+                self::fail("{$label}: an unassigned node was accepted");
+            } catch (InvalidArgument $e) {
+                self::assertStringContainsString('unassigned', $e->getMessage(), $label);
+            }
+        }
+    }
 }

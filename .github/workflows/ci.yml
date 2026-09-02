@@ -220,14 +220,27 @@ jobs:
       # guard covered its lines, passed, and missed a defect that made Surprise
       # count 105 edges on a 78-edge graph.
       #
-      # The threshold is measured, not aspired to: 83.23% is what the suite
-      # reaches, and 83 is that rounded down so ordinary variation between runs
-      # does not fail the build while a real weakening does. Every line of the
-      # library is reachable by some test -- mutation code coverage is 100% --
-      # so the number is entirely about whether the assertions notice, not
-      # about what is exercised.
+      # Two thresholds, because Infection reports two numbers and only one of
+      # them can be gamed by writing untested code.
       #
-      # Raise it when the score rises. Lowering it is a decision, not a fix.
+      # --with-uncovered is the important flag. Without it Infection does not
+      # generate mutants for code no test reaches, so the denominator excludes
+      # exactly the code that is missing tests -- and adding an untested class
+      # cannot lower the score. Measured on this repository: 186 mutants
+      # appear only when the flag is passed, and the overall figure drops from
+      # 84% to 81%.
+      #
+      # This comment used to say "every line of the library is reachable by
+      # some test -- mutation code coverage is 100%", which was true by
+      # construction rather than by achievement: with the flag absent, that
+      # 100% only ever said Infection had covered the lines it had chosen to
+      # mutate. It was the one claim in this repository that asserted more
+      # than it measured.
+      #
+      # Both numbers are measured, not aspired to, and both are rounded down
+      # so ordinary variation between runs does not fail the build while a
+      # real weakening does. Raise them when the score rises. Lowering either
+      # is a decision, not a fix.
       - name: Infection
         run: |
           vendor/bin/infection \
@@ -236,8 +249,9 @@ jobs:
             --no-progress \
             --only-covering-test-cases \
             --show-mutations=0 \
-            --min-msi=83 \
-            --min-covered-msi=83
+            --with-uncovered \
+            --min-msi=81 \
+            --min-covered-msi=84
 
       - name: Summary
         if: always()

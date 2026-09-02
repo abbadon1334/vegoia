@@ -176,6 +176,24 @@ final class Agreement
             );
         }
 
+        // Every measure here is built on a contingency table, and a table
+        // needs every node to be in exactly one community on each side. A
+        // partition that has been filtered leaves the dropped nodes at -1,
+        // and feeding one in used to reach an undefined index and then die
+        // with a DivisionByZeroError -- which is not a VegoiaException, so a
+        // caller catching this library's own type would not have caught it.
+        foreach (['first' => $a, 'second' => $b] as $which => $partition) {
+            if ($partition->hasUnassigned()) {
+                throw InvalidArgument::malformedEdge(
+                    "The {$which} partition has unassigned nodes, left there by filtering out "
+                    . 'the communities that were too small. Agreement is measured over a '
+                    . 'contingency table and every node has to be somewhere on both sides; '
+                    . 'compare the partitions before filtering, or rebuild from the kept '
+                    . 'communities alone'
+                );
+            }
+        }
+
         $sizesA = [];
         $sizesB = [];
         $joint = [];

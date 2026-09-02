@@ -134,6 +134,28 @@ final readonly class Partition
     }
 
     /**
+     * Whether any node was left out of every community.
+     *
+     * True only of a partition that came back from
+     * withoutCommunitiesSmallerThan(). Everything else in this class keeps the
+     * invariant that the community sizes sum to the order; a filtered
+     * partition deliberately does not, because relabelling the dropped nodes
+     * into a community of their own would be a worse lie than admitting they
+     * are unassigned. Callers that need the invariant -- the comparison
+     * measures, anything building a contingency table -- ask this first.
+     */
+    public function hasUnassigned(): bool
+    {
+        foreach ($this->membership as $community) {
+            if ($community < 0) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Drop communities below a size, returning the nodes that were dropped.
      * Small communities are mostly noise in a retrieval pipeline, and the
      * caller usually needs to know which nodes became unassigned.

@@ -10,6 +10,7 @@ use function array_values;
 use function count;
 use function max;
 use function min;
+use function sprintf;
 use function sqrt;
 
 use Vegoia\Exception\InvalidArgument;
@@ -437,6 +438,10 @@ final class LeastSquares
             $total = $normSquared->value();
 
             if ($total === 0.0) {
+                // An exactly zero column, which is the one case this can
+                // detect from inside the loop: the scale of R is not known
+                // until the factorisation finishes, so the general rank test
+                // lives in assertFullRank() and runs afterwards.
                 throw InvalidArgument::malformedEdge(
                     "Design matrix is rank deficient: column {$k} is zero below the diagonal"
                 );
@@ -529,6 +534,8 @@ final class LeastSquares
      */
     private static function backSubstitute(array $triangular, array $transformed, int $columns): array
     {
+        self::assertFullRank($triangular, $columns);
+
         $coefficients = array_fill(0, $columns, 0.0);
 
         for ($i = $columns - 1; $i >= 0; $i--) {
@@ -538,19 +545,70 @@ final class LeastSquares
                 $sum->add($triangular[$i * $columns + $j] * $coefficients[$j]);
             }
 
-            $diagonal = $triangular[$i * $columns + $i];
-
-            if ($diagonal === 0.0) {
-                throw InvalidArgument::malformedEdge(
-                    "Design matrix is singular: R has a zero on the diagonal at {$i}"
-                );
-            }
-
-            $coefficients[$i] = ($transformed[$i] - $sum->value()) / $diagonal;
+            $coefficients[$i] = ($transformed[$i] - $sum->value()) / $triangular[$i * $columns + $i];
         }
 
         /** @var list<float> $coefficients */
         return $coefficients;
+    }
+
+    /**
+     * Refuse a design whose columns are linearly dependent.
+     *
+     * Rank is judged against the scale of R, never against zero. This used to
+     * compare the diagonal with 0.0 exactly, and a Householder decomposition
+     * of a dependent column does not leave a clean zero -- it leaves a residue
+     * around machine epsilon. So the guard fired only on the trivially exact
+     * cases, a column of zeros, where the arithmetic happens to cancel
+     * perfectly, and let through every dependency that arose from real
+     * arithmetic. Two identical predictors returned coefficients of -9.5e12
+     * and +9.5e12 that cancel to something plausible, with an R-squared of
+     * 0.9959 and nothing to say the answer was meaningless.
+     *
+     * The tolerance is columns * epsilon relative to the largest diagonal,
+     * which is what LAPACK and numpy use to decide rank, and here it sits in a
+     * gap that was measured rather than assumed. On a collinear design the
+     * smallest relative diagonal is 1.6e-16; on Longley, the hardest
+     * legitimate case in the NIST collection, it is 1.3e-5, and on Filip's
+     * degree-ten Vandermonde 2.4e-2. Eleven orders of magnitude separate what
+     * has to be refused from what has to be accepted.
+     *
+     * Refusing rather than returning a minimum-norm solution, as numpy's
+     * lstsq does, follows this library elsewhere: a rank-deficient design has
+     * infinitely many answers that fit equally well, and picking one silently
+     * is picking one of infinitely many.
+     *
+     * @param list<float> $triangular
+     */
+    private static function assertFullRank(array $triangular, int $columns): void
+    {
+        $largest = 0.0;
+
+        for ($i = 0; $i < $columns; $i++) {
+            $largest = max($largest, abs($triangular[$i * $columns + $i]));
+        }
+
+        if ($largest === 0.0) {
+            throw InvalidArgument::malformedEdge(
+                'Design matrix is rank deficient: it is entirely zero'
+            );
+        }
+
+        $tolerance = $columns * PHP_FLOAT_EPSILON;
+
+        for ($i = 0; $i < $columns; $i++) {
+            $relative = abs($triangular[$i * $columns + $i]) / $largest;
+
+            if ($relative <= $tolerance) {
+                throw InvalidArgument::malformedEdge(sprintf(
+                    'Design matrix is rank deficient: column %d is a linear combination of the '
+                    . 'others, to within %.3g of the matrix scale, and a dependent design has '
+                    . 'infinitely many coefficient vectors that fit equally well',
+                    $i,
+                    $relative,
+                ));
+            }
+        }
     }
 
     /**

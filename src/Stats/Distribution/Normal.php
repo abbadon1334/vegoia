@@ -154,6 +154,20 @@ final class Normal extends ContinuousDistribution
         return ($x - $this->mean) / $this->standardDeviation;
     }
 
+    /**
+     * Required by the base class, and unreachable.
+     *
+     * Both hooks feed the generic bracket-and-refine inverse, and this class
+     * never enters it: quantile() and upperQuantile() are overridden with
+     * Wichura's AS 241, which answers in closed form. Nothing in the suite
+     * executes either method, and nothing can -- that is a property of the
+     * design and not a gap in the tests, which is why they are marked rather
+     * than chased.
+     *
+     * They are still correct if the closed form were ever withdrawn: the
+     * guess is the exact answer, so the refinement would converge on its
+     * first check, and the support really is unbounded below.
+     */
     protected function guessUpperQuantile(float $p): float
     {
         return $this->upperQuantile($p);

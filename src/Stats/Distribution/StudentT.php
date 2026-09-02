@@ -109,6 +109,16 @@ final class StudentT extends ContinuousDistribution
         return max($corrected, exp(($logC - log($p)) / $k));
     }
 
+    /**
+     * Required by the base class, and unreachable -- unlike the guess above,
+     * which the generic inverse does use.
+     *
+     * The base returns the infimum for p = 1, and upperQuantile() sends every
+     * p above a half to the reflection of its complement, so the base is only
+     * ever asked for p below a half. p = 1 arrives here as -upperQuantile(0),
+     * which is -INF by the other end of the same branch. The value below is
+     * what that path produces anyway.
+     */
     protected function infimum(): float
     {
         return -INF;

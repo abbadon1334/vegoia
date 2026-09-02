@@ -43,7 +43,12 @@ final class NodeIndex
         return $index;
     }
 
-    /** Idempotent: adding a known identifier returns the number it already has. */
+    /**
+     * Idempotent: adding a known identifier returns the number it already has.
+     *
+     * @phpstan-impure it appends, and static analysis otherwise concludes that
+     *                 identifiers() still returns the empty list it started as
+     */
     public function add(string $identifier): int
     {
         if (array_key_exists($identifier, $this->toInteger)) {

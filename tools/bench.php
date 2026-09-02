@@ -19,7 +19,12 @@ use Vegoia\Graph\Community\Leiden;
 use Vegoia\Graph\Community\Quality\Modularity;
 use Vegoia\Graph\Graph;
 use Vegoia\Graph\Path\Dijkstra;
+use Vegoia\Stats\Correlation;
 use Vegoia\Stats\Descriptive;
+use Vegoia\Stats\Distribution\Normal;
+use Vegoia\Stats\Precision;
+use Vegoia\Stats\Regression\LeastSquares;
+use Vegoia\Stats\SpecialFunction;
 
 require __DIR__ . '/../vendor/autoload.php';
 
@@ -164,18 +169,87 @@ foreach ($index as $spec) {
     }
 }
 
+// The statistics side, on inputs shaped to make the comparison mean
+// something. The values sit at 1e7 with a spread of 1000, which is the
+// condition that separates a compensated variance from a naive one; the
+// design is deliberately ill-conditioned in the same spirit.
 $values = [];
 for ($i = 0; $i < 1_000_000; $i++) {
     $values[] = sin($i) * 1000.0 + 10_000_000.0;
 }
 
-$stats = measure(static fn () => Descriptive::of($values)->stdDev(), runs: 3);
+$paired = [];
+for ($i = 0; $i < 1_000_000; $i++) {
+    $paired[] = $values[$i] * 0.5 + cos($i) * 250.0;
+}
+
+// 20,000 rows and eight predictors: large enough that the O(n p^2)
+// factorisation dominates rather than the setup around it.
+//
+// Each column gets its own frequency rather than its own phase. Phases fail:
+// sin(a + j) satisfies a three-term recurrence in j, so any three columns
+// built that way are linearly dependent, and the rank guard refuses the fit
+// -- which is how this benchmark was written the first time, and how the
+// guard proved it works on something nobody planted.
+$response = [];
+$design = [];
+for ($i = 0; $i < 20_000; $i++) {
+    $row = [];
+    $y = 3.0;
+    for ($j = 0; $j < 8; $j++) {
+        $x = sin($i * (0.0007 * ($j + 1) + 0.013));
+        $row[] = $x;
+        $y += ($j + 1) * 0.1 * $x;
+    }
+    $design[] = $row;
+    $response[] = $y + cos($i) * 0.01;
+}
+
+$probabilities = [];
+for ($i = 1; $i <= 100_000; $i++) {
+    $probabilities[] = $i / 100_001.0;
+}
+
+$normal = new Normal();
+
+$statistics = [
+    // Both precisions, because the default is the slow one and the comparison
+    // is otherwise misleading: numpy's np.std is a plain two-pass sum, which
+    // is what Fast does, while Extended is compensated Welford and buys the
+    // digits the accuracy table reports.
+    'stddev_1m' => measure(static fn () => Descriptive::of($values)->stdDev(), runs: 3),
+    'stddev_1m_fast' => measure(
+        static fn () => Descriptive::of($values, Precision::Fast)->stdDev(),
+        runs: 3,
+    ),
+    'pearson_1m' => measure(static fn () => Correlation::pearson($values, $paired), runs: 3),
+    'ols_20000x8' => measure(static fn () => LeastSquares::fit($design, $response), runs: 3),
+    'normal_quantile_100k' => measure(static function () use ($normal, $probabilities): void {
+        foreach ($probabilities as $p) {
+            $normal->quantile($p);
+        }
+    }, runs: 3),
+    'erfc_100k' => measure(static function () use ($probabilities): void {
+        foreach ($probabilities as $p) {
+            SpecialFunction::erfc($p * 6.0);
+        }
+    }, runs: 3),
+];
 
 if ($asJson) {
-    echo json_encode(
-        ['graph' => $report, 'stats' => ['stddev_1m_values_ms' => round($stats['median'], 3)]],
-        JSON_PRETTY_PRINT
-    ), "\n";
+    $stats = [];
+
+    foreach ($statistics as $name => $timing) {
+        $stats[$name] = round($timing['median'], 3);
+    }
+
+    echo json_encode(['graph' => $report, 'stats' => $stats], JSON_PRETTY_PRINT), "\n";
 } else {
-    printf("stats: standard deviation of 1,000,000 values (Welford, compensated): %.1f ms\n", $stats['median']);
+    echo "\nStatistics\n";
+    printf("%-24s %12s\n", 'operation', 'median ms');
+    echo str_repeat('-', 37), "\n";
+
+    foreach ($statistics as $name => $timing) {
+        printf("%-24s %12.2f\n", $name, $timing['median']);
+    }
 }

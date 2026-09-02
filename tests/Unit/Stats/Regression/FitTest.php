@@ -61,24 +61,27 @@ final class FitTest extends TestCase
             'a confidence level',
         ];
 
-        // The overall F compares the model with an intercept-only one, so it
-        // needs an intercept to compare against.
-        yield 'the overall F without an intercept' => [
+        // The overall F removes the slopes and compares. A model that has
+        // none is already the smaller model, so there is nothing to remove
+        // and nothing to ask -- unlike a model without an intercept, which
+        // has slopes and is tested against y = 0. See
+        // test_the_overall_test_works_without_an_intercept below.
+        yield 'the overall F with nothing but an intercept' => [
             static fn () => LeastSquares::fit(
-                [[1.0], [2.0], [3.0], [4.0]],
+                [[], [], [], []],
                 [2.1, 3.9, 6.2, 7.8],
-                false,
+                true,
             )->fStatistic(),
-            'intercept and at least one slope',
+            'at least one slope to remove',
         ];
 
-        yield 'the overall p-value without an intercept' => [
+        yield 'the overall p-value with nothing but an intercept' => [
             static fn () => LeastSquares::fit(
-                [[1.0], [2.0], [3.0], [4.0]],
+                [[], [], [], []],
                 [2.1, 3.9, 6.2, 7.8],
-                false,
+                true,
             )->overallPValue(),
-            'intercept and at least one slope',
+            'at least one slope to remove',
         ];
 
         // A Fit assembled by hand -- as the inference reference test does from
@@ -107,6 +110,44 @@ final class FitTest extends TestCase
         $this->expectExceptionMessageMatches('/' . preg_quote($identifies, '/') . '/i');
 
         $call();
+    }
+
+    /**
+     * A model fitted through the origin has an overall F after all.
+     *
+     * It used to be refused, on the reasoning that the F compares against an
+     * intercept-only model and there is no intercept to keep. But the smaller
+     * model is the one with the slopes removed, which without an intercept is
+     * y = 0 -- a real model, and the comparison every reference makes. NIST
+     * certifies 15750.25 for NoInt1 and 298.6666666666667 for NoInt2, and
+     * statsmodels reports the same; refusing made this library the odd one
+     * out. It was inconsistent internally too, since the total sum of squares
+     * beside it is already measured about zero for such a model.
+     *
+     * The values here are statsmodels', on a fit small enough to check by
+     * hand: the slope is 59.7/30, the residual sum of squares 0.097 against an
+     * uncentred total of 118.9, and one regression degree of freedom rather
+     * than none.
+     */
+    public function test_the_overall_test_works_without_an_intercept(): void
+    {
+        $fit = LeastSquares::fit([[1.0], [2.0], [3.0], [4.0]], [2.1, 3.9, 6.2, 7.8], false);
+
+        self::assertEqualsWithDelta(1.99, $fit->coefficients[0], 1.0e-13);
+        self::assertEqualsWithDelta(118.9, $fit->totalSumOfSquares, 1.0e-12);
+        self::assertEqualsWithDelta(0.097, $fit->residualSumOfSquares, 1.0e-13);
+
+        self::assertEqualsWithDelta(3674.3195876288523, $fit->fStatistic(), 1.0e-9);
+        self::assertEqualsWithDelta(9.891906611799298e-06, $fit->overallPValue(), 1.0e-17);
+
+        // The F is measured on one regression degree of freedom, not zero: an
+        // off-by-one there scales the statistic and still looks plausible.
+        self::assertSame(3, $fit->degreesOfFreedom);
+        self::assertEqualsWithDelta(
+            $fit->fStatistic(),
+            ($fit->totalSumOfSquares - $fit->residualSumOfSquares) / ($fit->residualSumOfSquares / 3.0),
+            1.0e-6,
+        );
     }
 
     /** The nearest arguments on the other side of each boundary. */

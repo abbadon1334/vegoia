@@ -149,10 +149,19 @@ final readonly class Fit
     }
 
     /**
-     * The overall F: every slope at once, against a model with only an intercept.
+     * The overall F: every slope at once, against the model without them.
      *
-     * Undefined without an intercept -- there is no smaller model to compare
-     * with -- and undefined with no slopes, for the same reason.
+     * That smaller model is the intercept alone where there is an intercept,
+     * and y = 0 where there is not -- which is why a model fitted through the
+     * origin has an F after all, and has as many regression degrees of freedom
+     * as it has parameters. NIST certifies exactly this for NoInt1 and NoInt2
+     * (15750.25 and 298.6666666666667) and statsmodels reports the same, so
+     * refusing it made this library disagree with both. It was also
+     * inconsistent with the total sum of squares alongside, which is already
+     * measured about zero for such a model.
+     *
+     * Undefined only when there are no slopes at all: an intercept-only model
+     * is the smaller model, and comparing it with itself asks nothing.
      */
     public function fStatistic(): float
     {
@@ -270,12 +279,12 @@ final readonly class Fit
     /** @return int the number of slopes, when an overall test makes sense */
     private function assertOverallTestIsDefined(): int
     {
-        $slopes = $this->parameters - 1;
+        $slopes = $this->parameters - ($this->hasIntercept ? 1 : 0);
 
-        if (! $this->hasIntercept || $slopes < 1) {
+        if ($slopes < 1) {
             throw InvalidArgument::malformedEdge(
-                'the overall F test compares the model with an intercept-only one, so it needs '
-                . 'an intercept and at least one slope'
+                'the overall F test compares a model with its slopes removed, so it needs at '
+                . 'least one slope to remove'
             );
         }
 

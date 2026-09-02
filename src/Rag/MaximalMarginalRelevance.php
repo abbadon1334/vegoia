@@ -30,9 +30,12 @@ use Vegoia\Exception\InvalidArgument;
 final class MaximalMarginalRelevance
 {
     /**
-     * @param  list<float>                   $query
-     * @param  array<array-key, list<float>> $candidates
-     * @return list<array-key>               selected keys, in the order chosen
+     * The candidates' keys are kept and returned; the keys *inside* a vector
+     * are not, since a vector is read by position -- see Similarity.
+     *
+     * @param  array<array-key, float>                       $query
+     * @param  array<array-key, array<array-key, float>>     $candidates
+     * @return list<array-key>                               selected keys, in the order chosen
      */
     public static function select(array $query, array $candidates, int $k, float $lambda = 0.5): array
     {

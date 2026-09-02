@@ -91,6 +91,30 @@ Notable changes, newest first. Versions are calendar-based: `YY.M.patch`.
   Still refused where it is genuinely undefined: a model with no slopes at all
   is the smaller model, and comparing it with itself asks nothing.
 
+- **`Similarity` and `LabelledGraph::fromMatrix` read arrays by key rather
+  than by position**, and were silently wrong on anything that was not a list.
+
+  `Similarity::dot`, `::euclidean` and `::cosine` walk two vectors together
+  using the first one's keys. Given a vector left keyed 5, 9, 12 -- which is
+  what `array_filter` returns after dropping a dimension -- every lookup
+  missed, and PHP answers a missing key with null and a warning rather than an
+  error, so the sum completed and returned a number. Worse, keys that all
+  exist in the wrong order raised nothing at all: `[2 => 1.0, 1 => 2.0,
+  0 => 3.0]` against `[4.0, 5.0, 6.0]` gave a dot product of 28 where the
+  answer is 32. `MaximalMarginalRelevance` inherited it, since it scores
+  candidates through the same door.
+
+  `fromMatrix` used a row's key directly as a node index, so a matrix keyed
+  2, 5, 9 came back as a graph with **no edges at all** -- every column index
+  fell below its row index and was skipped as the lower triangle. Labels
+  failed in the mirror image: three of them under keys 3, 7, 11 passed the
+  count check, missed every lookup, and left the nodes named 0, 1, 2.
+
+  Both now read by position, which is what the declared `list` types mean.
+  This is the same defect `Correlation` had, where a Pearson coefficient came
+  back 0.596 instead of 0.965; the signatures are widened to
+  `array<array-key, ...>` to say that any keying is accepted and normalised.
+
 - **`Katz::spectralRadius()` refused long paths.** It raised when its power
   iteration had not settled in a thousand steps, which a 201-node path does
   not: the two largest eigenvalues are 1.999758 and 1.999033, and separating

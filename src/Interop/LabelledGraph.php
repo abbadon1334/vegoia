@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Vegoia\Interop;
 
 use function array_key_exists;
+use function array_values;
 use function count;
 use function is_array;
 use function is_int;
@@ -137,8 +138,8 @@ final readonly class LabelledGraph
      * rows are called "0", "1" and so on, so the identifiers still round-trip
      * and the result behaves like every other one here.
      *
-     * @param list<list<float|int>> $matrix
-     * @param list<string|int>      $labels
+     * @param array<array-key, array<array-key, float|int>> $matrix
+     * @param array<array-key, string|int> $labels
      */
     public static function fromMatrix(array $matrix, array $labels = [], bool $directed = false): self
     {
@@ -149,6 +150,20 @@ final readonly class LabelledGraph
                 'The matrix has ' . $order . ' rows and ' . count($labels) . ' labels were given'
             );
         }
+
+        // Read by position, not by key. A row's key was being used directly
+        // as a node index, so a matrix keyed 2, 5, 9 -- what array_filter
+        // leaves behind -- came back as a graph with no edges at all: every
+        // column index fell below its row index and was skipped as the lower
+        // triangle. Nothing warned, because nothing was ever looked up. The
+        // labels failed in the mirror image: given three under keys 3, 7, 11
+        // the count check passed, every lookup missed, and the nodes came out
+        // named 0, 1, 2 with the supplied names silently dropped.
+        //
+        // Position is what a matrix means here, as it is in Similarity and in
+        // Correlation, both of which had the same defect.
+        $matrix = array_values($matrix);
+        $labels = array_values($labels);
 
         $index = new NodeIndex();
 
@@ -165,7 +180,7 @@ final readonly class LabelledGraph
                 );
             }
 
-            foreach ($columns as $column => $weight) {
+            foreach (array_values($columns) as $column => $weight) {
                 if ((float) $weight === 0.0) {
                     continue;
                 }

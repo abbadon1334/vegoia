@@ -66,6 +66,22 @@ final readonly class Katz
      * alphas that converge perfectly well, which is worse than useless in a
      * validity check. The shift is the same device Eigenvector needs, and for
      * the same reason: without it a bipartite graph oscillates forever.
+     *
+     * When the iteration does not settle, the bound is used after all rather
+     * than raising. That case is neither rare nor exotic: a path's eigenvalues
+     * crowd together as it lengthens, and on 201 nodes the largest two are
+     * 1.999758 and 1.999033, which after the shift leaves a ratio of 0.99982
+     * and needs about 152 000 steps to reach twelve digits. Raising the
+     * ceiling is not a fix -- a thousand-node path takes 34 seconds. Refusing
+     * was not one either: it stopped Katz working on an ordinary graph in
+     * order to protect against an alpha the caller had not yet given.
+     *
+     * The fallback is safe in the only direction that matters. The maximum
+     * strength bounds the spectral radius from above, so the critical alpha
+     * computed from it is never too generous -- it can only reject an alpha
+     * that would in fact have converged. On the graphs where it triggers that
+     * costs 0.012% of the usable range, because a path's maximum degree is 2
+     * and its spectral radius is 1.9998.
      */
     public static function spectralRadius(Graph $graph): float
     {
@@ -141,13 +157,11 @@ final readonly class Katz
         // of convergence, so an estimate that has not settled can wave through
         // an alpha whose series diverges -- and the scores that come back from
         // that are not wrong by a little.
+        // The estimate never settled, so fall back on the bound that does not
+        // need to. See the docblock for why this beats both refusing and
+        // iterating longer.
         if (! $converged) {
-            throw DidNotConverge::after(
-                "Katz's estimate of the largest eigenvalue",
-                1000,
-                $movement,
-                1.0e-12 * max(1.0, abs($eigenvalue)),
-            );
+            return $shift;
         }
 
         return abs($eigenvalue);

@@ -2,57 +2,86 @@
  "datasets": {
   "Filip": {
    "coefficients": 8.548211671281909,
+   "fStatistic": 9.269571060479224,
+   "regressionSumOfSquares": 11.754979765608383,
    "residualStandardDeviation": 7.9271799546436466,
+   "residualSumOfSquares": 9.270995474285382,
    "standardErrors": 8.466955407281185
   },
   "Longley": {
    "coefficients": 10.921425119103837,
+   "fStatistic": 15.00291739514312,
+   "regressionSumOfSquares": 15.382304446799262,
    "residualStandardDeviation": 12.547568223855052,
+   "residualSumOfSquares": 15.377958300097502,
    "standardErrors": 12.431382420933904
   },
   "NoInt1": {
    "coefficients": 14.715175620588305,
+   "fStatistic": 30.616647818371632,
+   "regressionSumOfSquares": 14.870865163789775,
    "residualStandardDeviation": 15.059799414108792,
+   "residualSumOfSquares": 14.663094062872181,
    "standardErrors": 15.67798437385844
   },
   "NoInt2": {
    "coefficients": 15.117317067688703,
+   "fStatistic": 16.197627818877184,
+   "regressionSumOfSquares": 15.146475296429916,
    "residualStandardDeviation": 15.22090906147575,
+   "residualSumOfSquares": 15.025170844476719,
    "standardErrors": 14.879723690217471
   },
   "Norris": {
    "coefficients": 13.326151395349187,
+   "fStatistic": 13.683311767956669,
+   "regressionSumOfSquares": 15.154861770465327,
    "residualStandardDeviation": 13.901433115234584,
+   "residualSumOfSquares": 13.7348102906188,
    "standardErrors": 13.823296207612302
   },
   "Pontius": {
    "coefficients": 12.36643329418502,
+   "fStatistic": 13.560539546675098,
+   "regressionSumOfSquares": 15.110149522024818,
    "residualStandardDeviation": 14.086687601774168,
+   "residualSumOfSquares": 13.571605139911204,
    "standardErrors": 14.010938081957327
   },
   "Wampler1": {
    "coefficients": 9.468375287876023,
+   "regressionSumOfSquares": 14.761909673285732,
    "residualStandardDeviation": 9.678194047665151,
    "standardErrors": 9.677567624725995
   },
   "Wampler2": {
    "coefficients": 13.215153411261754,
+   "regressionSumOfSquares": 15.262826047228476,
    "residualStandardDeviation": 14.34908292488909,
    "standardErrors": 14.348456501949935
   },
   "Wampler3": {
    "coefficients": 9.152297934472024,
+   "fStatistic": 15.127860782427245,
+   "regressionSumOfSquares": 14.761909673285732,
    "residualStandardDeviation": 13.915827962645604,
+   "residualSumOfSquares": 25.806805038659636,
    "standardErrors": 13.231495095691576
   },
   "Wampler4": {
    "coefficients": 7.673184092527816,
+   "fStatistic": 15.13358878293329,
+   "regressionSumOfSquares": 14.761909673285727,
    "residualStandardDeviation": 14.867595852957074,
+   "residualSumOfSquares": 27.21907208617938,
    "standardErrors": 13.319665359728766
   },
   "Wampler5": {
    "coefficients": 5.6750419595124795,
+   "fStatistic": 16.19911473917643,
+   "regressionSumOfSquares": 14.761909673218488,
    "residualStandardDeviation": 14.80177856846743,
+   "residualSumOfSquares": 27.219517492038403,
    "standardErrors": 13.31810515205982
   }
  },

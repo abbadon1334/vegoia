@@ -96,6 +96,107 @@ final class LinearRegressionTest extends TestCase
         );
     }
 
+    /**
+     * The overall F, against the certified analysis of variance.
+     *
+     * The one number in these files that exercises the whole fit at once:
+     * both sums of squares and both degrees of freedom, and so every
+     * coefficient through them. It had no certified reference until now
+     * because the parser read past the analysis of variance table entirely.
+     *
+     * It is also the number that punishes the obvious shortcut. Computing F
+     * as R-squared over one minus R-squared divides by a quantity that
+     * vanishes precisely when the fit is good: on Norris R-squared is
+     * 0.999993745883712 and on Pontius 0.99999999982, so that subtraction
+     * gives away nine digits exactly where the test is worth running.
+     */
+    #[DataProvider('datasets')]
+    public function test_the_overall_f_matches_the_certified_value(string $name): void
+    {
+        $set = NistRegression::load($name);
+        $fit = self::fit($set);
+
+        // Wampler1 and Wampler2 are fitted exactly, and NIST writes the word
+        // Infinity where the statistic goes. No double reaches that -- the
+        // residual sum of squares comes out at 3.5e-19 rather than at zero --
+        // so the requirement is that F is astronomically large, which is the
+        // true statement about a perfect fit, and not a number of digits.
+        if (! is_finite($set->fStatistic)) {
+            self::assertGreaterThan(1.0e20, $fit->fStatistic(), "{$name}: an exact fit has no residual to divide by");
+
+            return;
+        }
+
+        Lre::assertDigits(
+            $fit->fStatistic(),
+            $set->fStatistic,
+            "{$name}: overall F",
+            AttainableAccuracy::required($name, 'fStatistic', self::CEILINGS),
+        );
+    }
+
+    /**
+     * The degrees of freedom the F is measured on, which NIST certifies
+     * separately and which a wrong answer can still be built from.
+     *
+     * The regression count is the number of slopes -- so an intercept does not
+     * get one, and a model without an intercept has as many slopes as it has
+     * parameters. Getting this wrong scales F rather than breaking it, and a
+     * scaled F still looks entirely plausible.
+     */
+    #[DataProvider('datasets')]
+    public function test_the_degrees_of_freedom_match_the_certified_table(string $name): void
+    {
+        $set = NistRegression::load($name);
+        $fit = self::fit($set);
+
+        self::assertSame($set->residualDegreesOfFreedom, $fit->degreesOfFreedom, "{$name}: residual");
+        self::assertSame(
+            $set->regressionDegreesOfFreedom,
+            $fit->parameters - ($set->hasIntercept ? 1 : 0),
+            "{$name}: regression",
+        );
+    }
+
+    /**
+     * The sums of squares the table is built from.
+     *
+     * Certified independently of the coefficients, so they catch a fit that
+     * landed on the right parameters through a decomposition that lost the
+     * residual -- which is how an ill-conditioned design usually fails.
+     */
+    #[DataProvider('datasets')]
+    public function test_the_sums_of_squares_match_the_certified_table(string $name): void
+    {
+        $set = NistRegression::load($name);
+        $fit = self::fit($set);
+
+        // Wampler1 and Wampler2 have a certified residual of exactly zero, and
+        // an exact zero admits no relative error. Their residual is required
+        // to be negligible against the total instead.
+        if ($set->residualSumOfSquares === 0.0) {
+            self::assertLessThan(
+                1.0e-15 * $set->regressionSumOfSquares,
+                $fit->residualSumOfSquares,
+                "{$name}: an exactly-fitted model must leave nothing behind",
+            );
+        } else {
+            Lre::assertDigits(
+                $fit->residualSumOfSquares,
+                $set->residualSumOfSquares,
+                "{$name}: residual sum of squares",
+                AttainableAccuracy::required($name, 'residualStandardDeviation', self::CEILINGS),
+            );
+        }
+
+        Lre::assertDigits(
+            $fit->totalSumOfSquares - $fit->residualSumOfSquares,
+            $set->regressionSumOfSquares,
+            "{$name}: regression sum of squares",
+            AttainableAccuracy::required($name, 'residualStandardDeviation', self::CEILINGS),
+        );
+    }
+
     #[DataProvider('datasets')]
     public function test_r_squared_matches(string $name): void
     {

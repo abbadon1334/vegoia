@@ -76,6 +76,42 @@ Notable changes, newest first. Versions are calendar-based: `YY.M.patch`.
   and it reaches this library from its own output: `Fit::pValue()` returns one
   for a zero coefficient with a zero standard error.
 
+### Fixed
+
+- **`Fit::fStatistic()` and `::overallPValue()` refused a model fitted through
+  the origin.** The reasoning was that the F compares against an
+  intercept-only model, and without an intercept there is nothing to compare
+  with. But the smaller model is the one with the *slopes* removed, which
+  without an intercept is `y = 0` -- a real model, and the comparison every
+  reference makes. NIST certifies 15750.25 for NoInt1 and 298.6666666666667
+  for NoInt2, and statsmodels reports both; refusing made this library the odd
+  one out, and contradicted the total sum of squares beside it, which is
+  already measured about zero for such a model.
+
+  Still refused where it is genuinely undefined: a model with no slopes at all
+  is the smaller model, and comparing it with itself asks nothing.
+
+- **`Katz::spectralRadius()` refused long paths.** It raised when its power
+  iteration had not settled in a thousand steps, which a 201-node path does
+  not: the two largest eigenvalues are 1.999758 and 1.999033, and separating
+  them takes about 152,000 iterations. Raising the ceiling costs 34 seconds on
+  a thousand-node path, so it now falls back on the maximum strength, which
+  bounds the spectral radius without iterating. The bound can only reject an
+  alpha that would have converged, never accept one that would not, and on the
+  graphs where it triggers it gives up 0.012% of the usable range.
+
+### Changed
+
+- **The residual sum of squares is formed without collapsing the compensated
+  fitted value first.** Subtracting a fitted value from an observed one is a
+  cancellation, and cancellation is exactly when a discarded compensation stops
+  being negligible; subtracting the head first also makes the subtraction exact
+  by Sterbenz's lemma when the two are within a factor of two. Worth 0.17 of a
+  digit on NIST Pontius, where the residual is 1e-7 of the response, and 0.06
+  on Norris. `CompensatedSum::subtractedFrom()` is the new operation, alongside
+  `exponentiated()` and `dividedBy()`, which exist for the same reason.
+
+
 ## 26.9.3 — 2026-09-01
 
 ### Fixed

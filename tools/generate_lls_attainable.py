@@ -21,6 +21,7 @@ import math
 import pathlib
 import re
 
+import mpmath as mp
 import numpy as np
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -51,18 +52,28 @@ def parse(path: pathlib.Path) -> dict:
     intercept = 0 in indices
     n_params = len(indices)
 
-    resid_sd, r2 = None, None
+    resid_sd, r2, f_stat, ssr, sse = None, None, None, None, None
     for line in lines[cf - 1:ct]:
         s = line.strip()
         if s.startswith("Standard Deviation") and resid_sd is None:
             resid_sd = float(re.search(r"(-?[\d.]+(?:[Ee][-+]?\d+)?)\s*$", s).group(1))
         if s.startswith("R-Squared"):
             r2 = float(re.search(r"(-?[\d.]+(?:[Ee][-+]?\d+)?)\s*$", s).group(1))
+        # The certified analysis of variance. Wampler1 and Wampler2 fit
+        # exactly, so NIST writes "Infinity" where the F statistic goes.
+        m = re.match(r"Regression\s+\d+\s+(\S+)\s+\S+\s+(\S+)$", s)
+        if m:
+            ssr = float(m.group(1))
+            f_stat = math.inf if m.group(2) == "Infinity" else float(m.group(2))
+        m = re.match(r"Residual\s+\d+\s+(\S+)\s+\S+$", s)
+        if m:
+            sse = float(m.group(1))
 
     rows = [[float(p) for p in l.split()] for l in lines[df - 1:dt] if l.split()]
     return dict(model=model.strip(), intercept=intercept, n_params=n_params,
                 n_pred=n_pred, estimates=estimates, errors=errors,
-                resid_sd=resid_sd, r2=r2, data=np.array(rows, dtype=np.float64))
+                resid_sd=resid_sd, r2=r2, f_stat=f_stat, ssr=ssr, sse=sse,
+                data=np.array(rows, dtype=np.float64))
 
 
 def design(spec: dict) -> tuple[np.ndarray, np.ndarray]:
@@ -94,6 +105,44 @@ def worst(pairs) -> float | None:
     return min(scored) if scored else None
 
 
+def exact_statistics(X, y, beta, intercept: bool, dof: int) -> dict:
+    """The sums of squares and F at these coefficients, in exact arithmetic.
+
+    Every input is a float64 and is therefore an exact rational; mpmath then
+    forms the sums without a single further rounding, so what comes back is
+    the true value of the statistic for this fit rather than one particular
+    machine's evaluation of it.
+    """
+    with mp.workdps(60):
+        b = [mp.mpf(float(v)) for v in beta]
+        rows = [[mp.mpf(float(v)) for v in row] for row in X]
+        yy = [mp.mpf(float(v)) for v in y]
+
+        sse = mp.fsum((yi - mp.fsum(xij * bj for xij, bj in zip(row, b))) ** 2
+                      for row, yi in zip(rows, yy))
+
+        if intercept:
+            mean = mp.fsum(yy) / len(yy)
+            sst = mp.fsum((yi - mean) ** 2 for yi in yy)
+        else:
+            sst = mp.fsum(yi ** 2 for yi in yy)
+
+        slopes = len(b) - (1 if intercept else 0)
+        ssr = sst - sse
+        f = mp.inf if sse == 0 else (ssr / slopes) / (sse / dof)
+
+        return {"sse": sse, "ssr": ssr, "f": f}
+
+
+def lre_exact(computed, certified: float) -> float | None:
+    """Log relative error of an mpmath value against a certified double."""
+    with mp.workdps(60):
+        c = mp.mpf(certified)
+        if computed == c:
+            return None
+        return float(-mp.log10(abs((computed - c) / (c if c != 0 else 1))))
+
+
 def main() -> int:
     out = {}
     for path in sorted(LLS.glob("*.dat")):
@@ -112,16 +161,52 @@ def main() -> int:
         R_inv = np.linalg.inv(R)
         se = math.sqrt(sigma2) * np.sqrt((R_inv ** 2).sum(axis=1))
 
+        # The overall F and the two sums of squares it is built from.
+        #
+        # Measured differently from everything above, and it matters. The
+        # coefficients are compared against numpy's own rounded answer,
+        # because there the question is whether an implementation solves the
+        # system as well as a good one does. These three are dominated instead
+        # by how well any float64 solution can represent them at all: on
+        # Pontius the residual is 1e-7 of the response, so forming y - Xb
+        # cancels away three and a half digits before the sum begins.
+        #
+        # Measuring numpy's rounding there records luck. Its residual sum of
+        # squares on Pontius lands 13.64 digits from the certified value while
+        # the exact sum for its own coefficients lands 13.17 -- the rounding
+        # error happened to push it past what its coefficients could support.
+        # An implementation held to 13.64 would be held to reproducing that
+        # accident. So the ceiling is the exact-arithmetic value of the
+        # quantity at numpy's float64 coefficients: what a double-precision
+        # fit can reach, with the luck taken out.
+        exact = exact_statistics(X, y, beta, spec["intercept"], dof)
+
         out[path.stem] = {
             "coefficients": worst(zip(beta, spec["estimates"])),
             "standardErrors": worst(zip(se, spec["errors"])),
             "residualStandardDeviation": lre(math.sqrt(sigma2), spec["resid_sd"]),
         }
-        fmt = lambda z: "exact" if z is None else f"{z:6.2f}"
+
+        # Wampler1 and Wampler2 fit exactly and NIST writes "Infinity" for the
+        # F statistic. There is no accuracy to measure against an infinity, and
+        # recording null would read as "numpy hit it exactly" and demand every
+        # digit -- so the key is simply absent, and the PHP side asks a
+        # different question of those two.
+        if math.isfinite(spec["f_stat"]):
+            out[path.stem]["fStatistic"] = lre_exact(exact["f"], spec["f_stat"])
+
+        # Wampler1 and Wampler2 have a certified residual of exactly zero, and
+        # a relative error against zero says nothing. The PHP side requires
+        # those two to leave a negligible residual instead.
+        if spec["sse"] != 0:
+            out[path.stem]["residualSumOfSquares"] = lre_exact(exact["sse"], spec["sse"])
+        out[path.stem]["regressionSumOfSquares"] = lre_exact(exact["ssr"], spec["ssr"])
+        fmt = lambda z: "exact" if z is None else ("  n/a " if z == math.inf else f"{z:6.2f}")
         print(f"{path.stem:10s} p={X.shape[1]:2d} n={len(y):4d}  "
               f"beta={fmt(out[path.stem]['coefficients'])}  "
               f"se={fmt(out[path.stem]['standardErrors'])}  "
-              f"sd={fmt(out[path.stem]['residualStandardDeviation'])}")
+              f"sd={fmt(out[path.stem]['residualStandardDeviation'])}  "
+              f"F={fmt(out[path.stem].get('fStatistic', math.inf))}")
 
     doc = {
         "generator": f"numpy {np.__version__}, Householder QR (np.linalg.qr)",

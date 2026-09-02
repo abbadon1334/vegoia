@@ -47,6 +47,11 @@ final readonly class NistRegression
         public array $errors,
         public float $residualStandardDeviation,
         public float $rSquared,
+        public int $regressionDegreesOfFreedom,
+        public int $residualDegreesOfFreedom,
+        public float $regressionSumOfSquares,
+        public float $residualSumOfSquares,
+        public float $fStatistic,
         public array $response,
         public array $predictors,
     ) {
@@ -113,10 +118,45 @@ final readonly class NistRegression
             if (str_starts_with($trimmed, 'R-Squared')) {
                 $rSquared = self::trailingNumber($trimmed, $path);
             }
+
+            // The certified analysis of variance, which was being read past.
+            // Its F statistic is the one number in these files that exercises
+            // the whole fit at once -- coefficients, residual sum of squares
+            // and both degrees of freedom together -- so leaving it unparsed
+            // meant the overall test had no certified reference at all.
+            //
+            // Regression carries a fourth column, Residual only three:
+            //
+            //   Regression    1   4255954.13232369  4255954.13232369  5436385.54079785
+            //   Residual     34   26.6173985294224  0.782864662630069
+            if (preg_match('/^Regression\s+(\d+)\s+(\S+)\s+\S+\s+(\S+)/', $trimmed, $m) === 1) {
+                $regressionDegreesOfFreedom = (int) $m[1];
+                $regressionSumOfSquares = self::number($m[2], $path);
+                // Wampler1 and Wampler2 fit exactly, so NIST writes the word
+                // rather than a number. Kept as INF, which is the true value.
+                $fStatistic = $m[3] === 'Infinity' ? INF : self::number($m[3], $path);
+            }
+
+            if (preg_match('/^Residual\s+(\d+)\s+(\S+)\s+(\S+)/', $trimmed, $m) === 1) {
+                $residualDegreesOfFreedom = (int) $m[1];
+                $residualSumOfSquares = self::number($m[2], $path);
+            }
         }
 
         if ($estimates === [] || $residualStandardDeviation === null || $rSquared === null) {
             throw new RuntimeException("Incomplete certified block in {$path}");
+        }
+
+        if (
+            ! isset(
+                $regressionDegreesOfFreedom,
+                $residualDegreesOfFreedom,
+                $regressionSumOfSquares,
+                $residualSumOfSquares,
+                $fStatistic,
+            )
+        ) {
+            throw new RuntimeException("No certified analysis of variance in {$path}");
         }
 
         $response = [];
@@ -148,9 +188,30 @@ final readonly class NistRegression
             $errors,
             $residualStandardDeviation,
             $rSquared,
+            $regressionDegreesOfFreedom,
+            $residualDegreesOfFreedom,
+            $regressionSumOfSquares,
+            $residualSumOfSquares,
+            $fStatistic,
             $response,
             $predictors,
         );
+    }
+
+    /**
+     * A single certified field.
+     *
+     * Separate from trailingNumber() because these are read from the middle
+     * of a row and must be rejected if malformed, where a trailing match on a
+     * partly-read line would silently take whatever digits it found.
+     */
+    private static function number(string $field, string $path): float
+    {
+        if (preg_match('/^-?\d+\.?\d*(?:[Ee][-+]?\d+)?$/', $field) !== 1) {
+            throw new RuntimeException("Cannot read a number from '{$field}' in {$path}");
+        }
+
+        return (float) $field;
     }
 
     private static function trailingNumber(string $line, string $path): float

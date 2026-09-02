@@ -8,7 +8,6 @@ use function class_exists;
 
 use Fhaculty\Graph\Edge\Directed;
 use Fhaculty\Graph\Graph as ExternalGraph;
-use Vegoia\Exception\InvalidArgument;
 
 /**
  * Reads a graph built with graphp/graph, the established PHP graph library.
@@ -46,16 +45,13 @@ final class Graphp
     }
 
     /**
-     * @throws InvalidArgument when the library is not installed
+     * No installed-or-not check here: the parameter is typed as a graphp
+     * graph, so a caller who reached this method already holds one, and a
+     * caller who cannot build one cannot call it. isAvailable() is for asking
+     * beforehand.
      */
     public static function import(ExternalGraph $graph): LabelledGraph
     {
-        if (! self::isAvailable()) {
-            throw InvalidArgument::malformedEdge(
-                'graphp/graph is not installed; run composer require graphp/graph'
-            );
-        }
-
         $nodes = [];
 
         foreach ($graph->getVertices()->getVector() as $vertex) {

@@ -582,16 +582,15 @@ final class LeastSquares
      */
     private static function assertFullRank(array $triangular, int $columns): void
     {
+        // The largest diagonal entry stands in for the scale of R, and it is
+        // never zero here: R[k][k] is the norm of column k below the diagonal
+        // up to sign, so a zero diagonal means a zero column, and factorise()
+        // has already refused that from inside its own loop. No guard for it,
+        // therefore -- an unreachable branch is a claim no test can check.
         $largest = 0.0;
 
         for ($i = 0; $i < $columns; $i++) {
             $largest = max($largest, abs($triangular[$i * $columns + $i]));
-        }
-
-        if ($largest === 0.0) {
-            throw InvalidArgument::malformedEdge(
-                'Design matrix is rank deficient: it is entirely zero'
-            );
         }
 
         $tolerance = $columns * PHP_FLOAT_EPSILON;

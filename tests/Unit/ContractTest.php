@@ -8,17 +8,24 @@ use Generator;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use Vegoia\Exception\InvalidArgument;
+use Vegoia\Graph\Centrality\Eigenvector;
+use Vegoia\Graph\Centrality\Hits;
 use Vegoia\Graph\Centrality\Katz;
 use Vegoia\Graph\Centrality\PageRank;
 use Vegoia\Graph\Community\Agreement;
 use Vegoia\Graph\Community\Leiden;
+use Vegoia\Graph\Community\Quality\ConstantPotts;
+use Vegoia\Graph\Community\Quality\ErdosRenyiPotts;
 use Vegoia\Graph\Community\Quality\Modularity;
 use Vegoia\Graph\Graph;
+use Vegoia\Graph\LinkMeasure;
+use Vegoia\Graph\LinkPrediction;
 use Vegoia\Graph\Partition;
 use Vegoia\Graph\Path\BreadthFirst;
 use Vegoia\Graph\Path\Dijkstra;
 use Vegoia\Rag\MaximalMarginalRelevance;
 use Vegoia\Rag\NearestNeighbours;
+use Vegoia\Rag\Similarity;
 use Vegoia\Stats\Adjustment;
 use Vegoia\Stats\ChiSquaredTest;
 use Vegoia\Stats\Correlation;
@@ -28,6 +35,7 @@ use Vegoia\Stats\MannWhitneyU;
 use Vegoia\Stats\MultipleTesting;
 use Vegoia\Stats\OneWayAnova;
 use Vegoia\Stats\Regression\LeastSquares;
+use Vegoia\Stats\SpecialFunction;
 use Vegoia\Stats\TTest;
 
 /**
@@ -107,6 +115,125 @@ final class ContractTest extends TestCase
             'different numbers of nodes',
         ];
 
+        // Every guard below was found by measuring which throw sites no test
+        // reaches -- 28 of the library's 127 -- rather than by reading the
+        // code and guessing. A guard nothing exercises is a guard nobody has
+        // checked says the right thing, or fires on the right input, or fires
+        // at all.
+        yield 'a zero tolerance for PageRank' => [
+            static fn () => new PageRank(0.85, 0.0),
+            'Tolerance',
+        ];
+        yield 'a zero tolerance for eigenvector centrality' => [
+            static fn () => new Eigenvector(0.0),
+            'Tolerance',
+        ];
+        yield 'a zero tolerance for HITS' => [static fn () => new Hits(0.0), 'Tolerance'];
+        yield 'a negative personalisation weight' => [
+            static fn () => new PageRank()->of(Graph::undirected(3, [[0, 1], [1, 2]]), [0 => -1.0]),
+            'Personalisation weight for node 0',
+        ];
+        yield 'a personalisation naming a node outside the graph' => [
+            static fn () => new PageRank()->of(Graph::undirected(3, [[0, 1], [1, 2]]), [9 => 1.0]),
+            'Node 9 does not exist',
+        ];
+        yield 'a negative CPM resolution' => [
+            static fn () => new ConstantPotts(-1.0),
+            'Resolution',
+        ];
+        yield 'a negative RBER resolution' => [
+            static fn () => new ErdosRenyiPotts(-1.0),
+            'Resolution',
+        ];
+        yield 'an RBER gain before the graph is known' => [
+            static fn () => new ErdosRenyiPotts()->gain(1.0, 1.0, 1.0, 1.0, 1.0, 1.0),
+            'needs the graph density',
+        ];
+        yield 'a starting partition of the wrong size' => [
+            static fn () => Leiden::modularity(seed: 1)->partitionWithTrace(
+                Graph::undirected(4, [[0, 1], [2, 3]]),
+                Partition::fromMembership([0, 0, 1]),
+            ),
+            'The starting partition covers 3 nodes',
+        ];
+        yield 'a negative number of singletons' => [
+            static fn () => Partition::singletons(-1),
+            'cannot have -1 nodes',
+        ];
+        yield 'a zero limit on a link prediction ranking' => [
+            static fn () => LinkPrediction::rank(
+                Graph::undirected(3, [[0, 1], [1, 2]]),
+                0,
+                LinkMeasure::Jaccard,
+                0,
+            ),
+            'Result limit',
+        ];
+        yield 'link prediction from a node outside the graph' => [
+            static fn () => LinkPrediction::rank(
+                Graph::undirected(3, [[0, 1], [1, 2]]),
+                9,
+                LinkMeasure::Jaccard,
+            ),
+            'Node 9 does not exist',
+        ];
+        yield 'link prediction on a directed graph' => [
+            static fn () => LinkPrediction::score(
+                Graph::directed(3, [[0, 1], [1, 2]]),
+                0,
+                2,
+                LinkMeasure::Jaccard,
+            ),
+            'undirected graphs only',
+        ];
+        yield 'a similarity between empty vectors' => [
+            static fn () => Similarity::cosine([], []),
+            'a similarity',
+        ];
+        yield 'Kendall on an entirely tied sample' => [
+            static fn () => Correlation::kendall([1.0, 1.0, 1.0], [1.0, 2.0, 3.0]),
+            'entirely tied',
+        ];
+        yield 'the population variance of nothing' => [
+            static fn () => Descriptive::of([])->populationVariance(),
+            'the population variance',
+        ];
+        yield 'a coefficient of variation about a zero mean' => [
+            static fn () => Descriptive::of([-1.0, 0.0, 1.0])->coefficientOfVariation(),
+            'non-zero mean',
+        ];
+        yield 'Mann-Whitney with an empty second sample' => [
+            static fn () => MannWhitneyU::of([1.0, 2.0], []),
+            'second sample',
+        ];
+        yield 'a regression with no columns at all' => [
+            static fn () => LeastSquares::fit([[], []], [1.0, 2.0], false),
+            'A regression',
+        ];
+        yield 'a design column that is exactly zero' => [
+            static fn () => LeastSquares::fit(
+                [[0.0, 1.0], [0.0, 2.0], [0.0, 3.0]],
+                [1.0, 2.0, 3.0],
+                false,
+            ),
+            'rank deficient',
+        ];
+        // An entirely zero design. Worth its own row next to the one above:
+        // it is why assertFullRank() carries no "the whole matrix is zero"
+        // branch. The factorisation refuses column 0 before the scale of R is
+        // ever computed, so that branch could not run.
+        yield 'a design that is entirely zero' => [
+            static fn () => LeastSquares::fit(
+                [[0.0, 0.0], [0.0, 0.0], [0.0, 0.0]],
+                [1.0, 2.0, 3.0],
+                false,
+            ),
+            'column 0 is zero below the diagonal',
+        ];
+        yield 'a beta prefactor with a non-positive shape' => [
+            static fn () => SpecialFunction::betaPrefactor(0.5, 0.0, 1.0),
+            'betaPrefactor',
+        ];
         yield 'a contingency table with one row' => [
             static fn () => ChiSquaredTest::independence([[1, 2]]),
             'A contingency table needs rows',

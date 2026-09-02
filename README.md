@@ -559,6 +559,41 @@ digits for anyone. That is not asserted, it is *measured* —
 and the suite requires Vegoia to match it. Lowering a threshold until the tests
 pass is exactly the failure mode this design prevents.
 
+#### The scorecard itself
+
+Both columns are measured against the same certified values, so the comparison
+is not "does Vegoia agree with numpy" but "which of the two is closer to the
+truth". Correct significant digits, worst case across the parameters of each
+fit; reproduce with `php tools/accuracy_report.php`.
+
+| dataset | p | coefficients | | standard errors | | residual SD | |
+|---|--:|--:|--:|--:|--:|--:|--:|
+| | | *Vegoia* | *numpy* | *Vegoia* | *numpy* | *Vegoia* | *numpy* |
+| Norris | 2 | **14.12** | 13.33 | **13.93** | 13.82 | **14.05** | 13.90 |
+| NoInt1 | 1 | 14.72 | 14.72 | 15.68 | 15.68 | 15.06 | 15.06 |
+| NoInt2 | 1 | **15.34** | 15.12 | **15.78** | 14.88 | **15.52** | 15.22 |
+| Pontius | 3 | **12.71** | 12.37 | 13.39 | *14.01* | 13.40 | *14.09* |
+| Longley | 7 | **11.68** | 10.92 | **14.35** | 12.43 | **15.03** | 12.55 |
+| Wampler1 | 6 | **9.93** | 9.47 | **9.90** | 9.68 | **9.90** | 9.68 |
+| Wampler2 | 6 | 13.14 | *13.22* | **14.71** | 14.35 | **14.71** | 14.35 |
+| Wampler3 | 6 | **10.06** | 9.15 | **13.77** | 13.23 | 13.83 | *13.92* |
+| Wampler4 | 6 | **9.63** | 7.67 | **14.45** | 13.32 | 14.80 | *14.87* |
+| Wampler5 | 6 | **7.80** | 5.68 | **14.42** | 13.32 | 14.80 | 14.80 |
+| **Filip** | 11 | **13.75** | 8.55 | **13.86** | 8.47 | **14.17** | 7.93 |
+
+`tools/accuracy_report.php` prints this table and a second one for the
+univariate summary statistics. Across the sixty cells of the two, Vegoia is
+more accurate on 32, less on 9, and level on 19. Every one of the nine is a
+fraction of a digit -- the worst is Pontius' residual standard deviation, at
+0.69 -- and they sit against Filip, where the gap runs from 5.2 to 6.2 digits
+the other way.
+
+Filip is the dataset NIST notes many statistical packages cannot fit at all: a
+degree-10 polynomial whose design matrix has a condition number around 1e15.
+Householder QR survives it; the normal equations, which square the condition
+number, cannot. numpy is solving the same way here -- `np.linalg.qr`, not SVD
+-- so the gap is in the implementation and not in the choice of algorithm.
+
 **Graph results are checked against `leidenalg` and `networkx`**, which are
 generated into `resources/fixtures/graph/` by `tools/generate_graph_fixtures.py`
 and committed, so running the suite needs no Python. Centrality, distances and
@@ -580,14 +615,27 @@ including Zachary's karate club, Les Misérables, and a ring of cliques.
 
 ```
 $ composer test
-OK (482 tests, 4209 assertions)
+OK, but some tests were skipped!
+Tests: 2181, Assertions: 80151, Skipped: 5
 
 $ composer stan
 [OK] No errors                      # PHPStan level max
 
 $ php tools/jit_check.php
-OK: identical results with and without the JIT.
+interpreter: 0393ab7b1549ee5172b665cbbd0688bb
+tracing JIT: 0393ab7b1549ee5172b665cbbd0688bb
+OK: the JIT was on, and gave identical results.
 ```
+
+The five skips are declared, and each says why. Four are HITS on graphs whose
+leading eigenvalue is not simple -- a bow tie, a chain, a three-cycle, and a
+graph in two components -- where the principal eigenvector is not unique and
+so the scores are undefined for anybody, not merely unavailable here. The
+fifth is a prediction interval on Filip, whose design is rank deficient:
+statsmodels answers through a pseudo-inverse, so its intervals describe that
+fallback rather than the model, and the numbers move between machines on
+identical software. A reference that unreliable is recorded as absent rather
+than asserted against.
 
 That last guard is not paranoia. The tracing JIT is the recommended way to run
 these kernels, and results must not depend on it: an earlier optimisation of
@@ -602,11 +650,21 @@ optimisation was removed.
 
 Measured on planted-partition graphs with an average degree around 11, median
 of repeated runs; reproduce with `php tools/bench_compare.php`. The JIT column
-is PHP's tracing JIT -- one ini flag, worth 2-5x on these kernels:
+is PHP's tracing JIT -- two ini flags, worth 1.4-5x on these kernels:
 
 ```
-php -d opcache.enable_cli=1 -d opcache.jit=tracing -d opcache.jit_buffer_size=128M
+php -d pcov.enabled=0 -d xdebug.mode=off \
+    -d opcache.enable_cli=1 -d opcache.jit=tracing -d opcache.jit_buffer_size=128M
 ```
+
+The first line is not optional on a machine that has run the coverage job.
+pcov overrides `zend_execute_ex`, PHP answers by switching the JIT off, says
+so on stderr and carries on -- so a benchmark that only asks for the JIT
+measures the interpreter twice and reports a speedup of 1.0x. That is what
+`tools/bench_compare.php` was doing until it was fixed; it now disables both
+extensions in both lanes and refuses to run unless `opcache_get_status()`
+confirms the JIT is actually on. The same trap had already been found once, in
+`tools/jit_check.php`.
 
 Leiden community detection, on the SNAP graphs the literature benchmarks
 (`python3 tools/fetch_benchmark_graphs.py`) -- real networks, heavy-tailed,
@@ -614,39 +672,49 @@ with the hubs a planted-partition generator never produces:
 
 | graph             | nodes   | edges     | **Vegoia + JIT** | leidenalg (C) | ratio |
 |-------------------|---------|-----------|------------------|---------------|-------|
-| ca-GrQc           | 5 241   | 14 484    | **25 ms**        | 19 ms         | 1.32x |
-| ca-HepTh          | 9 875   | 25 973    | **55 ms**        | 42 ms         | 1.31x |
-| facebook_combined | 4 039   | 88 234    | **52 ms**        | 34 ms         | 1.53x |
-| ca-CondMat        | 23 133  | 93 439    | **196 ms**       | 144 ms        | 1.36x |
-| email-Enron       | 36 692  | 183 831   | **534 ms**       | 314 ms        | 1.70x |
-| com-dblp          | 317 080 | 1 049 866 | **5 490 ms**     | 5 973 ms      | 0.92x |
-| com-amazon        | 334 863 | 925 872   | **6 230 ms**     | 6 306 ms      | 0.99x |
+| ca-GrQc           | 5 241   | 14 484    | **18.4 ms**      | 18.3 ms       | 1.01x |
+| ca-HepTh          | 9 875   | 25 973    | **48.0 ms**      | 44.7 ms       | 1.07x |
+| facebook_combined | 4 039   | 88 234    | **39.5 ms**      | 32.4 ms       | 1.22x |
+| ca-CondMat        | 23 133  | 93 439    | **158 ms**       | 118 ms        | 1.34x |
+| email-Enron       | 36 692  | 183 831   | **339 ms**       | 236 ms        | 1.44x |
+| com-amazon        | 334 863 | 925 872   | **3 633 ms**     | 3 766 ms      | 0.96x |
+| com-dblp          | 317 080 | 1 049 866 | **3 553 ms**     | 3 744 ms      | 0.95x |
 
-Within 1.3-1.7x of the C reference on mid-sized graphs, and level with it past
-300k nodes. Quality is the same or better -- modularity within 0.0002 on every
-graph, and ahead on three of five:
+Within 1.0-1.44x of the C reference on mid-sized graphs, and slightly ahead of
+it past 300k nodes. Quality is close, and not uniformly in this library's
+favour:
 
 | graph       | Vegoia    | leidenalg | difference |
 |-------------|-----------|-----------|------------|
-| ca-GrQc     | 0.866313  | 0.865842  | **+0.00047** |
-| ca-CondMat  | 0.743108  | 0.742007  | **+0.00110** |
-| email-Enron | 0.629078  | 0.627303  | **+0.00178** |
-| ca-HepTh    | 0.777860  | 0.778026  | -0.00017   |
-| facebook    | 0.835694  | 0.835815  | -0.00012   |
+| email-Enron | 0.629078  | 0.627303  | **+0.001775** |
+| ca-GrQc     | 0.866836  | 0.866302  | **+0.000534** |
+| ca-CondMat  | 0.743108  | 0.743144  | -0.000036  |
+| facebook    | 0.835694  | 0.835815  | -0.000121  |
+| ca-HepTh    | 0.777860  | 0.778026  | -0.000166  |
 
-Zero internally disconnected communities across all of them.
+Best of five seeds each. Ahead on two of the five, behind on three, and the
+largest gap in either direction is 0.0018 -- which is the spread two correct
+searches show when they explore a rugged landscape in different random orders,
+not a difference in capability. An earlier version of this table reported
+ca-CondMat as +0.00110 in Vegoia's favour; re-measured it is -0.000036, and
+the claim of being "within 0.0002 on every graph" contradicted the +0.00178 in
+its own last row.
+
+Zero internally disconnected communities across all of them -- the property
+Leiden guarantees and Louvain does not, checked directly rather than assumed.
 
 Honesty requires the next number too: igraph also ships a natively tuned
-`community_leiden` that does the 100k graph in about 520 ms -- roughly 2x ahead
-of Vegoia with the JIT. That is what a C extension could still chase; nothing a
-subprocess architecture can reach.
+`community_leiden` that does the 100k graph in 758 ms against Vegoia's
+1 769 ms with the JIT -- 2.3x ahead. That is what a C extension could still
+chase; nothing a subprocess architecture can reach.
 
 ### Choosing accuracy or speed
 
-Extended arithmetic is the default and costs about ten times a plain
-computation. On most data it buys nothing; on data built to expose it, it buys
-five digits. Since you cannot tell which you have by looking at the answer,
-accuracy is the default and speed is the explicit choice:
+Extended arithmetic is the default and costs four to fifteen times a plain
+computation, depending on the statistic. On most data it buys nothing; on data
+built to expose it, it buys six digits. Since you cannot tell which you have
+by looking at the answer, accuracy is the default and speed is the explicit
+choice:
 
 ```php
 Descriptive::of($values);                      // extended, the default
@@ -654,12 +722,22 @@ Descriptive::of($values, Precision::Fast);     // ordinary floating point
 $stats->with(Precision::Fast);                 // same sample, other way
 ```
 
-Measured on 5000 values:
+Timings on 5 000 values, digits on NIST's NumAcc4 -- 1 001 values sitting at
+10 000 000.2, which binary64 cannot represent, built precisely to separate the
+two:
 
-| | mean | lag-1 autocorrelation | NumAcc4 digits |
-|---|---|---|---|
-| `Fast` | 0.029 ms | 0.18 ms | 9.00 |
-| `Extended` | 0.310 ms | 3.00 ms | **15.65** |
+| | mean | lag-1 autocorrelation | NumAcc4, r(1) | NumAcc4, stdDev |
+|---|---|---|---|---|
+| `Fast` | 0.039 ms | 0.070 ms | 9.00 digits | 8.25 digits |
+| `Extended` | 0.158 ms | 1.066 ms | **15.65 digits** | 8.25 digits |
+
+Four times the cost on a mean, fifteen on an autocorrelation -- the spread is
+wide because the autocorrelation forms exact products where the mean only
+compensates a sum.
+
+The last column is the honest counterweight: on NumAcc4's standard deviation
+the two are identical at 8.25 digits, because there the limit is the input and
+no arithmetic reaches past it. Extended buys the tail, not every case.
 
 `Fast` is not sloppy -- it is the same arithmetic numpy uses, and on two of the
 NIST datasets it scores higher than numpy does. Use it inside a loop over
@@ -670,33 +748,83 @@ thousands of series; leave the default alone for one careful pass.
 The graph timings above are the ones that decide whether this library is
 usable. The statistical kernels are smaller and the picture is different:
 
-| operation                    | Vegoia + JIT | numpy / scipy | ratio  |
-|------------------------------|--------------|---------------|--------|
-| ANOVA, 1809 observations     | **0.026 ms** | 0.469 ms      | 0.06x  |
-| Pearson, 5000 pairs          | 0.699 ms     | 0.198 ms      | 3.5x   |
-| least squares, Filip (82x11) | 0.422 ms     | 0.024 ms      | 18x    |
-| lag-1 autocorrelation, 5000  | 1.019 ms     | 0.024 ms      | 43x    |
+| operation                          | Vegoia + JIT | numpy / scipy | ratio |
+|------------------------------------|--------------|---------------|-------|
+| one-way ANOVA, 189 obs in 9 groups | **0.026 ms** | 0.482 ms      | 0.05x |
+| Pearson, 5 000 pairs               | 0.713 ms     | 0.042 ms      | 17x   |
+| least squares, Filip (82x11)       | 0.586 ms     | 0.029 ms      | 20x   |
+| lag-1 autocorrelation, 5 000       | 1.009 ms     | 0.007 ms      | 146x  |
 
-Where the work is a single pass over a few thousand values, numpy's vectorised
-inner loops win by one to two orders of magnitude, and no amount of PHP is
-going to change that. Where the work has structure numpy has no primitive for
--- one-way ANOVA is grouping plus two passes -- scipy pays for its generality
-and this is sixteen times faster.
+And on the larger inputs the benchmark uses, where the arrays are big enough
+that neither side is measuring its own call overhead:
 
-The autocorrelation is the clearest trade: it is the slowest ratio here
-precisely because it computes exact products, which is what buys the five extra
-digits over a plain implementation. Accuracy was chosen over speed knowingly,
-in a routine that runs once per series rather than in a loop.
+| operation | Vegoia | **+ JIT** | numpy / scipy | ratio |
+|---|---|---|---|---|
+| standard deviation, 1M values, `Extended` | 222.5 ms | **102.2 ms** | 0.56 ms | 184x |
+| the same, `Precision::Fast` | 42.4 ms | **27.8 ms** | 0.56 ms | 50x |
+| Pearson, 1M pairs | 378.9 ms | **174.3 ms** | 5.25 ms | 33x |
+| least squares, 20 000 x 8 | 186.1 ms | **69.6 ms** | 1.38 ms | 51x |
+| normal quantile, 100k values | 44.8 ms | **9.1 ms** | 1.70 ms | 5x |
+| `erfc`, 100k values | 282.4 ms | **109.9 ms** | 0.97 ms | 113x |
+
+Where the work is a pass over an array, numpy's vectorised inner loops win by
+one to two orders of magnitude, and no amount of PHP is going to change that.
+The comparison is not quite like for like in either direction: `np.std` is a
+plain two-pass sum, which is `Precision::Fast` and not the compensated
+default, so the 184x row is paying for the digits the accuracy table above
+reports; and the numpy figures are the minimal equivalent expression --
+`np.corrcoef`, not `scipy.stats.pearsonr`, which also computes a p-value and
+takes 4.4 times longer -- and which an earlier version of this table was
+timing, which is why the Pearson row used to read 3.5x instead of 17x.
+
+Where the work has structure numpy has no primitive for -- one-way ANOVA is
+grouping plus two passes -- scipy pays for its generality and this is twenty
+times faster.
+
+The autocorrelation is the clearest trade: it is the slowest ratio in either
+table precisely because it computes exact products, which is what buys the
+five extra digits over a plain implementation. Accuracy was chosen over speed
+knowingly, in a routine that runs once per series rather than in a loop.
 
 Reaching a C library from outside costs more than either: the GSL harness in
 `tools/lapack/` takes 1.3-1.6 ms for the same calls, nearly all of it process
 spawn. Below a millisecond of actual work, staying in-process wins whatever the
 language.
 
-Other operations at 100 000 nodes, with the JIT: PageRank 220 ms (igraph
-385 ms), Dijkstra 51 ms (igraph 20 ms), graph construction 306 ms (igraph
-49 ms). Betweenness is O(nm) -- 166 ms at 1 000 nodes and practical to a few
-thousand, in any language. Standard deviation over 1 000 000 values: 100 ms.
+Other operations at 100 000 nodes, with the JIT: PageRank 238 ms (igraph
+128 ms), Dijkstra 49 ms (igraph 24 ms), graph construction 322 ms (igraph
+48 ms). Betweenness is O(nm) -- 161 ms at 1 000 nodes and practical to a few
+thousand, in any language. Standard deviation over 1 000 000 values: 102 ms.
+
+An earlier version of this paragraph claimed PageRank at 220 ms against
+igraph's 385 ms, which read as a win and was not one. igraph ships two
+PageRank implementations and 385 ms is `arpack`; the default is `prpack`, and
+that is the number above. Measured against what a caller actually gets, igraph
+is about twice as fast here.
+
+### Against networkx, which is the comparison Vegoia is really in
+
+igraph answers what compiled C costs. networkx answers what a library written
+in the host language costs, which is the position this one occupies:
+
+| graph | operation | **Vegoia + JIT** | networkx | ratio |
+|---|---|---|---|---|
+| 1 000 nodes, 5 463 edges | community detection | **6.7 ms** | 56.0 ms | **8.4x** |
+| | PageRank | **2.5 ms** | 4.2 ms | **1.7x** |
+| | betweenness | **160.9 ms** | 2 139.6 ms | **13.3x** |
+| | closeness | **46.0 ms** | 404.3 ms | **8.8x** |
+| 5 000 nodes, 27 741 edges | community detection | **50.4 ms** | 388.5 ms | **7.7x** |
+| | PageRank | **12.0 ms** | 25.4 ms | **2.1x** |
+| | Dijkstra | **0.9 ms** | 3.6 ms | **4.0x** |
+
+The community detection rows compare Leiden with networkx's Louvain, because
+there is no Leiden in networkx -- a difference in algorithm as well as in
+speed, and Leiden is the one that cannot leave a community internally
+disconnected.
+
+Betweenness and closeness stop at 1 000 nodes for networkx: they are O(nm), and
+at 5 000 nodes that is 1.4e8 steps of interpreted Python, which runs for
+minutes rather than seconds.
 
 Every number above holds with results **bit-identical between interpreter and
 JIT**; `php tools/jit_check.php` guards exactly that, and the guard has already

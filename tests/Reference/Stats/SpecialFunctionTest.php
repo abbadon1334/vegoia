@@ -8,6 +8,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
+use Vegoia\Stats\Distribution\ChiSquared;
 use Vegoia\Stats\SpecialFunction;
 use Vegoia\Tests\Support\Lre;
 use Vegoia\Tests\Support\Paths;
@@ -160,6 +161,94 @@ final class SpecialFunctionTest extends TestCase
 
         self::assertAgreesWithScipy(SpecialFunction::regularizedGammaP($a, $x), $p, "P({$a}, {$x})");
         self::assertAgreesWithScipy(SpecialFunction::regularizedGammaQ($a, $x), $q, "Q({$a}, {$x})");
+    }
+
+    /** @return iterable<string, array{array<string, mixed>}> */
+    public static function gammaPrefactorPoints(): iterable
+    {
+        /** @var array<string, array<string, mixed>> $entries */
+        $entries = self::section('gamma_prefactor');
+
+        foreach ($entries as $key => $entry) {
+            yield $key => [$entry];
+        }
+    }
+
+    /**
+     * x^a e^-x / gamma(a), which is public because the chi-squared density is
+     * it over x.
+     *
+     * The hard part is that neither factor fits in a double while the ratio
+     * does: at a = 1000, x^a overflows and gamma(a) overflows, and only their
+     * quotient is an ordinary number. An implementation that goes through
+     * logarithms and exponentiates at the end survives the overflow but pays
+     * for it -- log-gamma(1000) is 5905, and the last three digits of the
+     * exponent's argument are gone before exp is ever called. This is why the
+     * prefactor is computed as its own thing.
+     *
+     * @param array<string, mixed> $entry
+     */
+    #[DataProvider('gammaPrefactorPoints')]
+    public function test_the_gamma_prefactor_matches_the_certified_value(array $entry): void
+    {
+        /** @var array{a: float, x: float, prefactor: array<string, mixed>} $entry */
+        $a = $entry['a'];
+        $x = $entry['x'];
+
+        /** @var array{certified: string, scipy: float, attainable: float|null, vanishes?: bool} $prefactor */
+        $prefactor = $entry['prefactor'];
+
+        self::assertAgreesWithScipy(
+            SpecialFunction::gammaPrefactor($a, $x),
+            $prefactor,
+            "gammaPrefactor({$a}, {$x})",
+        );
+    }
+
+    /**
+     * At x = 0 the prefactor is exactly zero, for every shape.
+     *
+     * Not in the generated fixture, and deliberately so: the certified value
+     * is zero, and a log relative error against zero is undefined -- the
+     * generator would have to special-case it into a "return zero" assertion,
+     * which is what this is, written where it can be read. Zero because
+     * 0^a = 0 for every a > 0, the only shapes the function accepts.
+     *
+     * The case matters because it is the one place the implementation cannot
+     * go through logarithms: log(0) is -INF, and exp(-INF) happens to be 0,
+     * but only by luck of IEEE and not by the code meaning it.
+     */
+    public function test_the_prefactor_vanishes_at_the_origin(): void
+    {
+        foreach ([0.001, 0.5, 1.0, 2.0, 7.5, 100.0, 1000.0] as $a) {
+            self::assertSame(0.0, SpecialFunction::gammaPrefactor($a, 0.0), "gammaPrefactor({$a}, 0)");
+        }
+    }
+
+    /**
+     * The prefactor is the chi-squared density times x, exactly.
+     *
+     * chi2(k) has density x^(k/2-1) e^(-x/2) / (2^(k/2) gamma(k/2)), and
+     * substituting a = k/2 and the argument x/2 into the prefactor gives
+     * (x/2)^(k/2) e^(-x/2) / gamma(k/2), which is that density times x. The
+     * identity is why the method is public at all, so it is pinned rather
+     * than left as a remark in a docblock -- and it ties the prefactor to a
+     * value the reference suite checks against SciPy independently.
+     */
+    public function test_the_prefactor_is_the_chi_squared_density_times_x(): void
+    {
+        foreach ([1.0, 2.0, 3.0, 7.0, 30.0, 200.0, 500.0] as $k) {
+            foreach ([0.05, 0.5, 1.0, 2.5, 10.0] as $ratio) {
+                $x = $k * $ratio;
+
+                Lre::assertDigits(
+                    SpecialFunction::gammaPrefactor($k / 2.0, $x / 2.0) / $x,
+                    new ChiSquared($k)->density($x),
+                    "chi2({$k}) density at {$x}",
+                    13.0,
+                );
+            }
+        }
     }
 
     /** @return iterable<string, array{array<string, mixed>}> */

@@ -39,7 +39,7 @@ import math
 import pathlib
 
 import mpmath as mp
-from scipy import special
+from scipy import special, stats
 
 mp.mp.dps = 50
 
@@ -170,6 +170,38 @@ def incomplete_beta() -> dict:
     return out
 
 
+def gamma_prefactor() -> dict:
+    """x^a e^-x / gamma(a): the factor in front of both incomplete gammas.
+
+    Public in the PHP library because the chi-squared density is exactly this
+    over x, so it is a value callers can land on directly and not only an
+    internal step. It is also where the cancellation lives: at a = 1000 the
+    numerator and gamma(a) are each astronomically large and the ratio is
+    ordinary, so anything that forms the two separately has already lost.
+
+    SciPy's independent route is the gamma density, whose pdf at shape a is
+    x^(a-1) e^-x / gamma(a) -- one factor of x away.
+    """
+    out = {}
+
+    for a in [0.5, 1.0, 2.0, 7.5, 20.0, 100.0, 1000.0]:
+        for ratio in [0.01, 0.5, 1.0, 2.0, 10.0]:
+            x = a * ratio
+            key = f"a={a!r},x={x!r}"
+            ma, mx = mp.mpf(repr(a)), mp.mpf(repr(x))
+            out[key] = {
+                "a": a,
+                "x": x,
+                "prefactor": case(
+                    "prefactor",
+                    mx**ma * mp.e ** (-mx) / mp.gamma(ma),
+                    float(stats.gamma.pdf(x, a) * x),
+                ),
+            }
+
+    return out
+
+
 def main() -> int:
     document = {
         "generator": "mpmath 50 dps for the certified value, scipy.special for the attainable accuracy",
@@ -183,6 +215,7 @@ def main() -> int:
         "error_function": error_function(),
         "incomplete_gamma": incomplete_gamma(),
         "incomplete_beta": incomplete_beta(),
+        "gamma_prefactor": gamma_prefactor(),
     }
 
     path = pathlib.Path("resources/fixtures/stats/special_functions.json")

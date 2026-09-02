@@ -384,7 +384,7 @@ final class LeastSquares
                 $fitted->add($matrix[$i * $columns + $j] * $coefficients[$j]);
             }
 
-            $error = $response[$i] - $fitted->value();
+            $error = $fitted->subtractedFrom($response[$i]);
             $squares->add($error * $error);
         }
 

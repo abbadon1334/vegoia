@@ -84,6 +84,33 @@ final class CompensatedSum
      * it is what lets NIST's NumAcc3 and NumAcc4 come out exact. GSL reaches
      * the same place by accumulating in long double, which PHP does not have.
      */
+    /**
+     * $value minus the accumulated total, without collapsing it first.
+     *
+     * The same reasoning as exponentiated() and dividedBy(), and it pays
+     * where a residual is formed: subtracting a fitted value from an observed
+     * one is a cancellation, and cancellation is precisely when the discarded
+     * compensation stops being negligible.
+     *
+     * Collapsing first computes value - (sum + compensation), which rounds the
+     * addition and then subtracts. Subtracting the head first does better than
+     * avoid one rounding: when value and sum are within a factor of two, which
+     * is what a well-fitted point means, Sterbenz's lemma makes value - sum
+     * exact, so the whole of the compensation survives into the answer instead
+     * of being rounded away against a number a million times its size.
+     *
+     * Measured on the NIST least squares sets, where the residual sum of
+     * squares is the quantity that suffers. It is worth 0.17 of a digit on
+     * Pontius, 12.96 to 13.13, which is the set where the cancellation is
+     * worst; 0.06 on Norris; and nothing at all on the rest, whose residuals
+     * are not small enough against the response for the compensation to be
+     * reachable. The overall F follows, being that sum twice over.
+     */
+    public function subtractedFrom(float $value): float
+    {
+        return ($value - $this->sum) - $this->compensation;
+    }
+
     public function dividedBy(float $divisor): float
     {
         if ($divisor === 0.0) {

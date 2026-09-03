@@ -2,7 +2,7 @@
 
 Notable changes, newest first. Versions are calendar-based: `YY.M.patch`.
 
-## 26.9.4 — 2026-09-02
+## 26.9.4 — 2026-09-03
 
 Nothing was removed and no signature changed: the public surface only gained
 methods, so upgrading from any 26.9 needs no change to calling code. Three of

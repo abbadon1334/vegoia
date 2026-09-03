@@ -670,19 +670,32 @@ Leiden community detection, on the SNAP graphs the literature benchmarks
 (`python3 tools/fetch_benchmark_graphs.py`) -- real networks, heavy-tailed,
 with the hubs a planted-partition generator never produces:
 
-| graph             | nodes   | edges     | **Vegoia + JIT** | leidenalg (C) | ratio |
-|-------------------|---------|-----------|------------------|---------------|-------|
-| ca-GrQc           | 5 241   | 14 484    | **18.4 ms**      | 18.3 ms       | 1.01x |
-| ca-HepTh          | 9 875   | 25 973    | **48.0 ms**      | 44.7 ms       | 1.07x |
-| facebook_combined | 4 039   | 88 234    | **39.5 ms**      | 32.4 ms       | 1.22x |
-| ca-CondMat        | 23 133  | 93 439    | **158 ms**       | 118 ms        | 1.34x |
-| email-Enron       | 36 692  | 183 831   | **339 ms**       | 236 ms        | 1.44x |
-| com-amazon        | 334 863 | 925 872   | **3 633 ms**     | 3 766 ms      | 0.96x |
-| com-dblp          | 317 080 | 1 049 866 | **3 553 ms**     | 3 744 ms      | 0.95x |
+| graph             | nodes   | edges     | **Vegoia + JIT** | leidenalg (C) | ratio | via sidecar | vs in-process |
+|-------------------|---------|-----------|------------------|---------------|-------|-------------|---------------|
+| ca-GrQc           | 5 241   | 14 484    | **18.4 ms**      | 18.3 ms       | 1.01x | 513 ms      | **27.8x**     |
+| ca-HepTh          | 9 875   | 25 973    | **48.0 ms**      | 44.7 ms       | 1.07x | 562 ms      | **11.7x**     |
+| facebook_combined | 4 039   | 88 234    | **39.5 ms**      | 32.4 ms       | 1.22x | 652 ms      | **16.5x**     |
+| ca-CondMat        | 23 133  | 93 439    | **158 ms**       | 118 ms        | 1.34x | 721 ms      | **4.6x**      |
+| email-Enron       | 36 692  | 183 831   | **339 ms**       | 236 ms        | 1.44x | 922 ms      | **2.7x**      |
+| com-amazon        | 334 863 | 925 872   | **3 633 ms**     | 3 766 ms      | 0.96x | 5 096 ms    | 1.40x         |
+| com-dblp          | 317 080 | 1 049 866 | **3 553 ms**     | 3 744 ms      | 0.95x | 5 081 ms    | 1.43x         |
 
 Within 1.0-1.44x of the C reference on mid-sized graphs, and slightly ahead of
-it past 300k nodes. Quality is close, and not uniformly in this library's
-favour:
+it past 300k nodes.
+
+The last two columns are the ones this library was written for. `via sidecar`
+is the same leidenalg partition reached the way a PHP application reaches it
+today: spawn the interpreter, import igraph and leidenalg, serialise the graph
+to JSON, parse the answer back. That fixed cost is around half a second and it
+does not shrink, so it is 28x the whole computation on ca-GrQc and 2.7x on
+email-Enron, and only on the 300k-node graphs -- where the algorithm itself
+runs for seconds -- does it fade to 1.4x.
+
+Which is the point: on the graph sizes a request actually carries, being 1.2x
+slower than C in-process beats being 1.0x as fast as C through a subprocess, by
+an order of magnitude.
+
+Quality is close, and not uniformly in this library's favour:
 
 | graph       | Vegoia    | leidenalg | difference |
 |-------------|-----------|-----------|------------|
@@ -793,8 +806,16 @@ language.
 
 Other operations at 100 000 nodes, with the JIT: PageRank 238 ms (igraph
 128 ms), Dijkstra 49 ms (igraph 24 ms), graph construction 322 ms (igraph
-48 ms). Betweenness is O(nm) -- 161 ms at 1 000 nodes and practical to a few
-thousand, in any language. Standard deviation over 1 000 000 values: 102 ms.
+48 ms). On the SNAP graphs the same operations sit at 2.5-3x igraph, except
+graph construction, which is 2.5-5.8x and the widest gap in the file.
+Betweenness is O(nm) -- 161 ms at 1 000 nodes and practical to a few thousand,
+in any language. Standard deviation over 1 000 000 values: 102 ms.
+
+Two PageRank rows on the SNAP graphs came out ahead of igraph, at 0.08x on
+ca-HepTh and 0.30x on email-Enron. They are not reported as wins: igraph's
+default PageRank varied between 84 ms and 567 ms across nine runs on one graph
+here, so a single median on either side of that spread says more about the
+measurement than about the implementations.
 
 An earlier version of this paragraph claimed PageRank at 220 ms against
 igraph's 385 ms, which read as a win and was not one. igraph ships two

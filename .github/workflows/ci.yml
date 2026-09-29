@@ -19,7 +19,7 @@ jobs:
     name: Static analysis
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
@@ -47,7 +47,7 @@ jobs:
         # highest catches a dependency that moved under us.
         dependencies: [lowest, highest]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
@@ -68,7 +68,7 @@ jobs:
     name: JIT consistency
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # The tracing JIT is a process-level setting, so a difference between it
       # and the interpreter is invisible to PHPUnit from inside one process.
@@ -96,7 +96,7 @@ jobs:
     name: Coverage
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Set up PHP with pcov
         uses: shivammathur/setup-php@v2
@@ -122,7 +122,7 @@ jobs:
     name: Fixtures are reproducible
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-python@v5
         with:
@@ -198,7 +198,7 @@ jobs:
     name: Mutation testing
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # Infection compares against a base commit when asked to; the full
           # history is cheap here and saves a second fetch if that is ever

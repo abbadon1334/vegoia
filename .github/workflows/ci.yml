@@ -112,7 +112,7 @@ jobs:
         run: vendor/bin/phpunit --coverage-clover=coverage.xml --coverage-text --colors=always
 
       - name: Store the report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: coverage
           path: coverage.xml
@@ -257,7 +257,7 @@ jobs:
         if: always()
         run: cat build/infection/summary.log || true
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: infection-report

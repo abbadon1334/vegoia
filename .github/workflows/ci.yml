@@ -29,7 +29,7 @@ jobs:
           tools: composer:v2
 
       - name: Install dependencies
-        uses: ramsey/composer-install@v3
+        uses: ramsey/composer-install@4.0.0
 
       - name: Formatting
         run: vendor/bin/pint --test
@@ -57,7 +57,7 @@ jobs:
           tools: composer:v2
 
       - name: Install dependencies
-        uses: ramsey/composer-install@v3
+        uses: ramsey/composer-install@4.0.0
         with:
           dependency-versions: ${{ matrix.dependencies }}
 
@@ -84,7 +84,7 @@ jobs:
           ini-values: opcache.enable_cli=1, opcache.jit=tracing, opcache.jit_buffer_size=128M
 
       - name: Install dependencies
-        uses: ramsey/composer-install@v3
+        uses: ramsey/composer-install@4.0.0
 
       - name: Results must not depend on the JIT
         run: php tools/jit_check.php
@@ -106,7 +106,7 @@ jobs:
           tools: composer:v2
 
       - name: Install dependencies
-        uses: ramsey/composer-install@v3
+        uses: ramsey/composer-install@4.0.0
 
       - name: PHPUnit with coverage
         run: vendor/bin/phpunit --coverage-clover=coverage.xml --coverage-text --colors=always
@@ -135,7 +135,7 @@ jobs:
           coverage: none
           tools: composer:v2
 
-      - uses: ramsey/composer-install@v3
+      - uses: ramsey/composer-install@4.0.0
 
       # The committed fixtures, and the accuracy ceilings measured from
       # numpy, are the reference every numeric test is checked against. If
@@ -212,7 +212,7 @@ jobs:
           coverage: pcov
           tools: composer:v2
 
-      - uses: ramsey/composer-install@v3
+      - uses: ramsey/composer-install@4.0.0
 
       # Coverage answers which lines ran; this answers whether anything would
       # have complained had they been wrong. The two come apart more often
